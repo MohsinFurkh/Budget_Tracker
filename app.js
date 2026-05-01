@@ -14,6 +14,8 @@ const categories = [
 const StorageManager = {
     EXPENSES_KEY: 'budget_expenses',
     BUDGET_KEY: 'monthly_budget',
+    USER_KEY: 'user_profile',
+    ONBOARDING_KEY: 'onboarding_complete',
     
     getExpenses() {
         const data = localStorage.getItem(this.EXPENSES_KEY);
@@ -31,6 +33,27 @@ const StorageManager = {
     
     saveBudget(budget) {
         localStorage.setItem(this.BUDGET_KEY, JSON.stringify(budget));
+    },
+    
+    getUserProfile() {
+        const data = localStorage.getItem(this.USER_KEY);
+        return data ? JSON.parse(data) : null;
+    },
+    
+    saveUserProfile(profile) {
+        localStorage.setItem(this.USER_KEY, JSON.stringify(profile));
+    },
+    
+    isOnboardingComplete() {
+        return localStorage.getItem(this.ONBOARDING_KEY) === 'true';
+    },
+    
+    completeOnboarding() {
+        localStorage.setItem(this.ONBOARDING_KEY, 'true');
+    },
+    
+    resetOnboarding() {
+        localStorage.removeItem(this.ONBOARDING_KEY);
     },
     
     addExpense(expense) {
@@ -51,6 +74,19 @@ const StorageManager = {
 let currentView = 'dashboard';
 let selectedPeriod = 'month';
 let chartInstances = {};
+let onboardingStep = 1;
+const currencies = [
+    { code: 'USD', symbol: '$', name: 'US Dollar' },
+    { code: 'EUR', symbol: '€', name: 'Euro' },
+    { code: 'GBP', symbol: '£', name: 'British Pound' },
+    { code: 'PKR', symbol: '₨', name: 'Pakistani Rupee' },
+    { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+    { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
+    { code: 'SAR', symbol: '﷼', name: 'Saudi Riyal' },
+    { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+    { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' }
+];
+let selectedCurrency = 'USD';
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
@@ -61,6 +97,18 @@ document.addEventListener('DOMContentLoaded', () => {
 // Render Functions
 function renderApp() {
     const app = document.getElementById('app');
+    
+    // Check if onboarding is needed
+    if (!StorageManager.isOnboardingComplete()) {
+        app.innerHTML = renderOnboarding();
+        lucide.createIcons();
+        return;
+    }
+    
+    const user = StorageManager.getUserProfile();
+    const currency = user?.currency || 'USD';
+    selectedCurrency = currency;
+    
     app.innerHTML = `
         <div class="flex flex-col min-h-screen">
             ${renderHeader()}
@@ -82,14 +130,193 @@ function renderApp() {
     }
 }
 
+function renderOnboarding() {
+    const steps = {
+        1: renderWelcomeStep,
+        2: renderProfileStep,
+        3: renderBudgetStep,
+        4: renderCurrencyStep,
+        5: renderReadyStep
+    };
+    
+    const stepRenderer = steps[onboardingStep] || steps[1];
+    return `
+        <div class="min-h-screen gradient-bg flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+                <!-- Progress indicator -->
+                <div class="flex justify-center gap-2 mb-8">
+                    ${[1, 2, 3, 4, 5].map(i => `
+                        <div class="w-2 h-2 rounded-full transition-all ${i === onboardingStep ? 'w-8 bg-indigo-600' : i < onboardingStep ? 'bg-indigo-400' : 'bg-gray-300'}"></div>
+                    `).join('')}
+                </div>
+                
+                ${stepRenderer()}
+            </div>
+        </div>
+    `;
+}
+
+function renderWelcomeStep() {
+    return `
+        <div class="text-center">
+            <div class="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="wallet" class="w-12 h-12 text-indigo-600"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-3">Welcome to Budget Tracker</h1>
+            <p class="text-gray-600 mb-8">Track your personal and family expenses with ease. Get insights, visualize your spending, and stay on budget.</p>
+            <button onclick="nextOnboardingStep()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition">
+                Get Started
+            </button>
+        </div>
+    `;
+}
+
+function renderProfileStep() {
+    return `
+        <div>
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="user" class="w-8 h-8 text-indigo-600"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">What's your name?</h2>
+                <p class="text-gray-600 mt-2">Personalize your experience</p>
+            </div>
+            <form onsubmit="saveProfileAndContinue(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
+                    <input type="text" name="username" required 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                        placeholder="Enter your name">
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="prevOnboardingStep()" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition">
+                        Back
+                    </button>
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition">
+                        Continue
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+}
+
+function renderBudgetStep() {
+    return `
+        <div>
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="target" class="w-8 h-8 text-indigo-600"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Set your budget</h2>
+                <p class="text-gray-600 mt-2">What's your monthly budget?</p>
+            </div>
+            <form onsubmit="saveBudgetAndContinue(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Monthly Budget</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">$</span>
+                        <input type="number" name="monthlyBudget" required min="1" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-lg"
+                            placeholder="5000" value="5000">
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="prevOnboardingStep()" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition">
+                        Back
+                    </button>
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition">
+                        Continue
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+}
+
+function renderCurrencyStep() {
+    return `
+        <div>
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="coins" class="w-8 h-8 text-indigo-600"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Select currency</h2>
+                <p class="text-gray-600 mt-2">Choose your preferred currency</p>
+            </div>
+            <form onsubmit="saveCurrencyAndContinue(event)" class="space-y-4">
+                <div class="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                    ${currencies.map(c => `
+                        <label class="cursor-pointer">
+                            <input type="radio" name="currency" value="${c.code}" 
+                                ${c.code === selectedCurrency ? 'checked' : ''}
+                                class="peer sr-only" onchange="selectedCurrency = '${c.code}'">
+                            <div class="p-3 rounded-xl border-2 border-gray-200 text-center peer-checked:border-indigo-600 peer-checked:bg-indigo-50 transition hover:border-gray-300">
+                                <div class="text-2xl mb-1">${c.symbol}</div>
+                                <div class="text-xs font-medium text-gray-700">${c.code}</div>
+                            </div>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="prevOnboardingStep()" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition">
+                        Back
+                    </button>
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition">
+                        Continue
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+}
+
+function renderReadyStep() {
+    const user = StorageManager.getUserProfile();
+    const budget = StorageManager.getBudget();
+    const currency = currencies.find(c => c.code === user?.currency) || currencies[0];
+    
+    return `
+        <div class="text-center">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="check" class="w-10 h-10 text-green-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">You're all set!</h2>
+            <p class="text-gray-600 mb-6">Welcome, ${user?.name || 'there'}! Here's your setup:</p>
+            
+            <div class="bg-gray-50 rounded-xl p-4 mb-6 text-left">
+                <div class="flex justify-between py-2 border-b border-gray-200">
+                    <span class="text-gray-600">Name</span>
+                    <span class="font-medium">${user?.name || '-'}</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-200">
+                    <span class="text-gray-600">Monthly Budget</span>
+                    <span class="font-medium">${currency.symbol}${budget.toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between py-2">
+                    <span class="text-gray-600">Currency</span>
+                    <span class="font-medium">${user?.currency || 'USD'}</span>
+                </div>
+            </div>
+            
+            <button onclick="completeOnboarding()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition">
+                Start Tracking
+            </button>
+        </div>
+    `;
+}
+
 function renderHeader() {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const user = StorageManager.getUserProfile();
+    const greeting = user?.name ? `Hi, ${user.name}!` : 'Budget Tracker';
+    
     return `
         <header class="gradient-bg text-white p-4 md:p-6">
             <div class="max-w-7xl mx-auto">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-bold">Budget Tracker</h1>
+                        <h1 class="text-2xl md:text-3xl font-bold">${greeting}</h1>
                         <p class="text-sm md:text-base opacity-90 mt-1">${today}</p>
                     </div>
                     <button onclick="exportData()" class="bg-white/20 hover:bg-white/30 rounded-lg p-2 transition">
@@ -133,6 +360,7 @@ function renderDashboard() {
     const totalSpent = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
     const remaining = monthlyBudget - totalSpent;
     const percentUsed = (totalSpent / monthlyBudget) * 100;
+    const currencySymbol = getCurrencySymbol();
     
     return `
         <div class="space-y-6">
@@ -142,7 +370,7 @@ function renderDashboard() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm">Monthly Budget</p>
-                            <p class="text-2xl font-bold text-gray-800">$${monthlyBudget.toLocaleString()}</p>
+                            <p class="text-2xl font-bold text-gray-800">${currencySymbol}${monthlyBudget.toLocaleString()}</p>
                         </div>
                         <button onclick="editBudget()" class="text-gray-400 hover:text-gray-600">
                             <i data-lucide="edit-2" class="w-4 h-4"></i>
@@ -151,12 +379,12 @@ function renderDashboard() {
                 </div>
                 <div class="bg-white rounded-xl p-5 card-shadow">
                     <p class="text-gray-500 text-sm">Total Spent</p>
-                    <p class="text-2xl font-bold text-red-500">$${totalSpent.toLocaleString()}</p>
+                    <p class="text-2xl font-bold text-red-500">${currencySymbol}${totalSpent.toLocaleString()}</p>
                     <p class="text-xs text-gray-400 mt-1">${currentMonthExpenses.length} transactions</p>
                 </div>
                 <div class="bg-white rounded-xl p-5 card-shadow">
                     <p class="text-gray-500 text-sm">Remaining</p>
-                    <p class="text-2xl font-bold ${remaining >= 0 ? 'text-green-500' : 'text-red-500'}">$${remaining.toLocaleString()}</p>
+                    <p class="text-2xl font-bold ${remaining >= 0 ? 'text-green-500' : 'text-red-500'}">${currencySymbol}${remaining.toLocaleString()}</p>
                     <p class="text-xs text-gray-400 mt-1">${percentUsed.toFixed(1)}% used</p>
                 </div>
             </div>
@@ -201,6 +429,7 @@ function renderDashboard() {
 
 function renderAddExpense() {
     const today = new Date().toISOString().split('T')[0];
+    const currencySymbol = getCurrencySymbol();
     
     return `
         <div class="max-w-md mx-auto">
@@ -209,9 +438,9 @@ function renderAddExpense() {
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
                     <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">${currencySymbol}</span>
                         <input type="number" name="amount" required min="0.01" step="0.01"
-                            class="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                             placeholder="0.00">
                     </div>
                 </div>
@@ -256,6 +485,7 @@ function renderAddExpense() {
 function renderHistory() {
     const expenses = StorageManager.getExpenses().sort((a, b) => new Date(b.date) - new Date(a.date));
     const grouped = groupExpensesByMonth(expenses);
+    const currencySymbol = getCurrencySymbol();
     
     return `
         <div>
@@ -284,7 +514,7 @@ function renderHistory() {
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <span class="font-semibold text-gray-800">$${expense.amount.toFixed(2)}</span>
+                                    <span class="font-semibold text-gray-800">${currencySymbol}${expense.amount.toFixed(2)}</span>
                                     <button onclick="deleteExpense(${expense.id})" class="text-red-400 hover:text-red-600">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
@@ -311,6 +541,7 @@ function renderAnalytics() {
     const monthlyData = getMonthlyData(expenses);
     const categoryTotals = getCategoryTotals(expenses);
     const yearlyComparison = getYearlyComparison(expenses);
+    const currencySymbol = getCurrencySymbol();
     
     return `
         <div class="space-y-6">
@@ -355,7 +586,7 @@ function renderAnalytics() {
                                     <div class="flex-1">
                                         <div class="flex justify-between mb-1">
                                             <span class="font-medium text-gray-800">${cat.name}</span>
-                                            <span class="font-medium text-gray-800">$${total.toFixed(2)}</span>
+                                            <span class="font-medium text-gray-800">${currencySymbol}${total.toFixed(2)}</span>
                                         </div>
                                         <div class="w-full bg-gray-200 rounded-full h-2">
                                             <div class="h-2 rounded-full" style="width: ${percentage}%; background-color: ${cat.color}"></div>
@@ -392,6 +623,7 @@ function renderAnalytics() {
 
 function renderExpenseItem(expense) {
     const cat = categories.find(c => c.id === expense.category);
+    const currencySymbol = getCurrencySymbol();
     return `
         <div class="flex items-center justify-between py-2">
             <div class="flex items-center gap-3">
@@ -403,7 +635,7 @@ function renderExpenseItem(expense) {
                     <p class="text-xs text-gray-500">${new Date(expense.date).toLocaleDateString()}</p>
                 </div>
             </div>
-            <span class="font-semibold text-gray-800">$${expense.amount.toFixed(2)}</span>
+            <span class="font-semibold text-gray-800">${currencySymbol}${expense.amount.toFixed(2)}</span>
         </div>
     `;
 }
@@ -473,6 +705,7 @@ function getYearlyComparison(expenses) {
 function generateInsights(expenses, categoryTotals) {
     const insights = [];
     const total = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
+    const currencySymbol = getCurrencySymbol();
     
     if (total === 0) {
         insights.push("Start adding expenses to see personalized insights.");
@@ -491,7 +724,7 @@ function generateInsights(expenses, categoryTotals) {
     const monthlyData = getMonthlyData(expenses);
     const months = Object.keys(monthlyData).length;
     const avgMonthly = total / (months || 1);
-    insights.push(`Your average monthly spending is $${avgMonthly.toFixed(2)}.`);
+    insights.push(`Your average monthly spending is ${currencySymbol}${avgMonthly.toFixed(2)}.`);
     
     // Budget status
     const budget = StorageManager.getBudget();
@@ -725,4 +958,58 @@ function exportData() {
 function filterHistory(value) {
     // Re-render with filter (simplified)
     renderApp();
+}
+
+// Onboarding Functions
+function nextOnboardingStep() {
+    if (onboardingStep < 5) {
+        onboardingStep++;
+        renderApp();
+    }
+}
+
+function prevOnboardingStep() {
+    if (onboardingStep > 1) {
+        onboardingStep--;
+        renderApp();
+    }
+}
+
+function saveProfileAndContinue(e) {
+    e.preventDefault();
+    const form = e.target;
+    const profile = StorageManager.getUserProfile() || {};
+    profile.name = form.username.value;
+    StorageManager.saveUserProfile(profile);
+    nextOnboardingStep();
+}
+
+function saveBudgetAndContinue(e) {
+    e.preventDefault();
+    const form = e.target;
+    StorageManager.saveBudget(parseFloat(form.monthlyBudget.value));
+    nextOnboardingStep();
+}
+
+function saveCurrencyAndContinue(e) {
+    e.preventDefault();
+    const form = e.target;
+    const selectedCurr = form.currency.value;
+    const profile = StorageManager.getUserProfile() || {};
+    profile.currency = selectedCurr;
+    StorageManager.saveUserProfile(profile);
+    selectedCurrency = selectedCurr;
+    nextOnboardingStep();
+}
+
+function completeOnboarding() {
+    StorageManager.completeOnboarding();
+    renderApp();
+}
+
+// Currency helper
+function getCurrencySymbol() {
+    const user = StorageManager.getUserProfile();
+    const currency = currencies.find(c => c.code === user?.currency) || currencies[0];
+    return currency.symbol;
 }
