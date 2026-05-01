@@ -1,5 +1,15 @@
 // Budget Tracker App
-const categories = [
+
+// Transaction Types
+const TRANSACTION_TYPES = {
+    EXPENSE: 'expense',
+    INVESTMENT: 'investment',
+    TRANSFER: 'transfer',
+    COMMITMENT: 'commitment'
+};
+
+// Expense Categories
+const expenseCategories = [
     { id: 'food', name: 'Food & Dining', icon: 'utensils', color: '#FF6B6B' },
     { id: 'transport', name: 'Transportation', icon: 'car', color: '#4ECDC4' },
     { id: 'shopping', name: 'Shopping', icon: 'shopping-bag', color: '#45B7D1' },
@@ -7,13 +17,36 @@ const categories = [
     { id: 'bills', name: 'Bills & Utilities', icon: 'receipt', color: '#FFEAA7' },
     { id: 'health', name: 'Health & Medical', icon: 'heart-pulse', color: '#DDA0DD' },
     { id: 'education', name: 'Education', icon: 'book-open', color: '#98D8C8' },
-    { id: 'other', name: 'Other', icon: 'more-horizontal', color: '#F7DC6F' }
+    { id: 'other_expense', name: 'Other Expenses', icon: 'more-horizontal', color: '#F7DC6F' }
 ];
+
+// Investment Categories
+const investmentCategories = [
+    { id: 'sip_mutual_fund', name: 'SIP - Mutual Funds', icon: 'trending-up', color: '#10B981' },
+    { id: 'stocks', name: 'Stocks', icon: 'bar-chart-2', color: '#3B82F6' },
+    { id: 'daughter_1', name: 'Daughter Account 1', icon: 'piggy-bank', color: '#EC4899' },
+    { id: 'daughter_2', name: 'Daughter Account 2', icon: 'piggy-bank', color: '#F59E0B' },
+    { id: 'other_investment', name: 'Other Investments', icon: 'landmark', color: '#8B5CF6' }
+];
+
+// Transfer Categories
+const transferCategories = [
+    { id: 'home_transfer', name: 'Money to Home', icon: 'send', color: '#06B6D4' }
+];
+
+// Commitment Categories (Fixed monthly outflows)
+const commitmentCategories = [
+    { id: 'house_rent', name: 'House Rent', icon: 'home', color: '#EF4444' },
+    { id: 'loan_emi', name: 'Loan EMI', icon: 'credit-card', color: '#DC2626' }
+];
+
+// All categories combined for backward compatibility
+const categories = [...expenseCategories, ...investmentCategories, ...transferCategories, ...commitmentCategories];
 
 // Storage Manager
 const StorageManager = {
     EXPENSES_KEY: 'budget_expenses',
-    BUDGET_KEY: 'monthly_budget',
+    INCOME_KEY: 'monthly_income',  // Changed from budget to income
     USER_KEY: 'user_profile',
     ONBOARDING_KEY: 'onboarding_complete',
     
@@ -26,13 +59,23 @@ const StorageManager = {
         localStorage.setItem(this.EXPENSES_KEY, JSON.stringify(expenses));
     },
     
-    getBudget() {
-        const data = localStorage.getItem(this.BUDGET_KEY);
+    // Income methods (replaced budget)
+    getIncome() {
+        const data = localStorage.getItem(this.INCOME_KEY);
         return data ? JSON.parse(data) : 5000;
     },
     
+    saveIncome(income) {
+        localStorage.setItem(this.INCOME_KEY, JSON.stringify(income));
+    },
+    
+    // Backward compatibility - redirect budget calls to income
+    getBudget() {
+        return this.getIncome();
+    },
+    
     saveBudget(budget) {
-        localStorage.setItem(this.BUDGET_KEY, JSON.stringify(budget));
+        this.saveIncome(budget);
     },
     
     getUserProfile() {
@@ -206,17 +249,17 @@ function renderBudgetStep() {
         <div>
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="target" class="w-8 h-8 text-indigo-600"></i>
+                    <i data-lucide="wallet" class="w-8 h-8 text-indigo-600"></i>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-800">Set your budget</h2>
-                <p class="text-gray-600 mt-2">What's your monthly budget?</p>
+                <h2 class="text-2xl font-bold text-gray-800">Set your income</h2>
+                <p class="text-gray-600 mt-2">What's your monthly income?</p>
             </div>
-            <form onsubmit="saveBudgetAndContinue(event)" class="space-y-4">
+            <form onsubmit="saveIncomeAndContinue(event)" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Monthly Budget</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Monthly Income</label>
                     <div class="relative">
                         <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">$</span>
-                        <input type="number" name="monthlyBudget" required min="1" 
+                        <input type="number" name="monthlyIncome" required min="1" 
                             class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-lg"
                             placeholder="5000" value="5000">
                     </div>
@@ -273,7 +316,7 @@ function renderCurrencyStep() {
 
 function renderReadyStep() {
     const user = StorageManager.getUserProfile();
-    const budget = StorageManager.getBudget();
+    const income = StorageManager.getIncome();
     const currency = currencies.find(c => c.code === user?.currency) || currencies[0];
     
     return `
@@ -290,8 +333,8 @@ function renderReadyStep() {
                     <span class="font-medium">${user?.name || '-'}</span>
                 </div>
                 <div class="flex justify-between py-2 border-b border-gray-200">
-                    <span class="text-gray-600">Monthly Budget</span>
-                    <span class="font-medium">${currency.symbol}${budget.toLocaleString()}</span>
+                    <span class="text-gray-600">Monthly Income</span>
+                    <span class="font-medium">${currency.symbol}${income.toLocaleString()}</span>
                 </div>
                 <div class="flex justify-between py-2">
                     <span class="text-gray-600">Currency</span>
@@ -355,50 +398,112 @@ function renderBottomNav() {
 
 function renderDashboard() {
     const expenses = StorageManager.getExpenses();
-    const monthlyBudget = StorageManager.getBudget();
-    const currentMonthExpenses = getCurrentMonthExpenses(expenses);
-    const totalSpent = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const remaining = monthlyBudget - totalSpent;
-    const percentUsed = (totalSpent / monthlyBudget) * 100;
+    const monthlyIncome = StorageManager.getIncome();
+    const currentMonthTransactions = getCurrentMonthTransactions(expenses);
+    
+    // Calculate totals by type
+    const totalExpenses = currentMonthTransactions
+        .filter(t => t.type === TRANSACTION_TYPES.EXPENSE)
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    const totalInvestments = currentMonthTransactions
+        .filter(t => t.type === TRANSACTION_TYPES.INVESTMENT)
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    const totalTransfers = currentMonthTransactions
+        .filter(t => t.type === TRANSACTION_TYPES.TRANSFER)
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    const totalCommitments = currentMonthTransactions
+        .filter(t => t.type === TRANSACTION_TYPES.COMMITMENT)
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    const totalOutflow = totalExpenses + totalInvestments + totalTransfers + totalCommitments;
+    const savings = monthlyIncome - totalOutflow;
+    const savingsPercent = monthlyIncome > 0 ? (savings / monthlyIncome) * 100 : 0;
+    
     const currencySymbol = getCurrencySymbol();
     
     return `
         <div class="space-y-6">
-            <!-- Summary Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white rounded-xl p-5 card-shadow">
+            <!-- Main Summary: Income & Savings -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl p-6 card-shadow text-white">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-gray-500 text-sm">Monthly Budget</p>
-                            <p class="text-2xl font-bold text-gray-800">${currencySymbol}${monthlyBudget.toLocaleString()}</p>
+                            <p class="text-white/80 text-sm">Monthly Income</p>
+                            <p class="text-3xl font-bold">${currencySymbol}${monthlyIncome.toLocaleString()}</p>
                         </div>
-                        <button onclick="editBudget()" class="text-gray-400 hover:text-gray-600">
-                            <i data-lucide="edit-2" class="w-4 h-4"></i>
+                        <button onclick="editIncome()" class="bg-white/20 hover:bg-white/30 rounded-lg p-2 transition">
+                            <i data-lucide="edit-2" class="w-5 h-5"></i>
                         </button>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl p-5 card-shadow">
-                    <p class="text-gray-500 text-sm">Total Spent</p>
-                    <p class="text-2xl font-bold text-red-500">${currencySymbol}${totalSpent.toLocaleString()}</p>
-                    <p class="text-xs text-gray-400 mt-1">${currentMonthExpenses.length} transactions</p>
-                </div>
-                <div class="bg-white rounded-xl p-5 card-shadow">
-                    <p class="text-gray-500 text-sm">Remaining</p>
-                    <p class="text-2xl font-bold ${remaining >= 0 ? 'text-green-500' : 'text-red-500'}">${currencySymbol}${remaining.toLocaleString()}</p>
-                    <p class="text-xs text-gray-400 mt-1">${percentUsed.toFixed(1)}% used</p>
+                <div class="${savings >= 0 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-600'} rounded-xl p-6 card-shadow text-white">
+                    <div>
+                        <p class="text-white/80 text-sm">Monthly Savings</p>
+                        <p class="text-3xl font-bold">${currencySymbol}${savings.toLocaleString()}</p>
+                        <p class="text-white/80 text-sm mt-1">${savingsPercent.toFixed(1)}% of income</p>
+                    </div>
                 </div>
             </div>
             
-            <!-- Progress Bar -->
+            <!-- Detailed Breakdown -->
+            <div class="bg-white rounded-xl p-5 card-shadow">
+                <h3 class="font-semibold text-gray-800 mb-4">Monthly Outflow Breakdown</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="p-4 bg-red-50 rounded-xl">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                <i data-lucide="shopping-bag" class="w-4 h-4 text-red-600"></i>
+                            </div>
+                            <span class="text-sm text-gray-600">Expenses</span>
+                        </div>
+                        <p class="text-xl font-bold text-gray-800">${currencySymbol}${totalExpenses.toLocaleString()}</p>
+                    </div>
+                    <div class="p-4 bg-blue-50 rounded-xl">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i data-lucide="trending-up" class="w-4 h-4 text-blue-600"></i>
+                            </div>
+                            <span class="text-sm text-gray-600">Investments</span>
+                        </div>
+                        <p class="text-xl font-bold text-gray-800">${currencySymbol}${totalInvestments.toLocaleString()}</p>
+                    </div>
+                    <div class="p-4 bg-cyan-50 rounded-xl">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
+                                <i data-lucide="send" class="w-4 h-4 text-cyan-600"></i>
+                            </div>
+                            <span class="text-sm text-gray-600">Transfers</span>
+                        </div>
+                        <p class="text-xl font-bold text-gray-800">${currencySymbol}${totalTransfers.toLocaleString()}</p>
+                    </div>
+                    <div class="p-4 bg-orange-50 rounded-xl">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <i data-lucide="home" class="w-4 h-4 text-orange-600"></i>
+                            </div>
+                            <span class="text-sm text-gray-600">Commitments</span>
+                        </div>
+                        <p class="text-xl font-bold text-gray-800">${currencySymbol}${totalCommitments.toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Total Outflow Progress -->
             <div class="bg-white rounded-xl p-5 card-shadow">
                 <div class="flex justify-between text-sm mb-2">
-                    <span class="text-gray-600">Budget Usage</span>
-                    <span class="font-medium ${percentUsed > 80 ? 'text-red-500' : 'text-gray-700'}">${percentUsed.toFixed(1)}%</span>
+                    <span class="text-gray-600">Total Outflow vs Income</span>
+                    <span class="font-medium ${totalOutflow > monthlyIncome ? 'text-red-500' : 'text-gray-700'}">${currencySymbol}${totalOutflow.toLocaleString()} / ${currencySymbol}${monthlyIncome.toLocaleString()}</span>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-3">
-                    <div class="${percentUsed > 80 ? 'bg-red-500' : percentUsed > 60 ? 'bg-yellow-500' : 'bg-green-500'} h-3 rounded-full transition-all duration-500" 
-                         style="width: ${Math.min(percentUsed, 100)}%"></div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                    <div class="${totalOutflow > monthlyIncome ? 'bg-red-500' : 'bg-indigo-500'} h-4 rounded-full transition-all duration-500" 
+                         style="width: ${Math.min((totalOutflow / monthlyIncome) * 100, 100)}%"></div>
                 </div>
+                <p class="text-xs text-gray-500 mt-2">
+                    ${totalOutflow > monthlyIncome ? '⚠️ Warning: Outflow exceeds income!' : '✓ Outflow within income limit'}
+                </p>
             </div>
             
             <!-- Quick Stats -->
@@ -420,27 +525,76 @@ function renderDashboard() {
                     <button onclick="setView('history')" class="text-indigo-600 text-sm hover:underline">View All</button>
                 </div>
                 <div class="space-y-3">
-                    ${currentMonthExpenses.slice(-5).reverse().map(expense => renderExpenseItem(expense)).join('')}
+                    ${currentMonthTransactions.slice(-5).reverse().map(transaction => renderExpenseItem(transaction)).join('')}
                 </div>
             </div>
         </div>
     `;
 }
 
+let selectedTransactionType = TRANSACTION_TYPES.EXPENSE;
+
 function renderAddExpense() {
     const today = new Date().toISOString().split('T')[0];
     const currencySymbol = getCurrencySymbol();
     
+    const typeCategories = getCategoriesByType(selectedTransactionType);
+    const typeLabel = getTransactionTypeLabel(selectedTransactionType);
+    const typeColor = getTransactionTypeColor(selectedTransactionType);
+    
     return `
         <div class="max-w-md mx-auto">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">Add Expense</h2>
-            <form onsubmit="handleExpenseSubmit(event)" class="bg-white rounded-xl p-6 card-shadow space-y-4">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Add Transaction</h2>
+            <form onsubmit="handleTransactionSubmit(event)" class="bg-white rounded-xl p-6 card-shadow space-y-4">
+                <!-- Transaction Type Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Transaction Type</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.EXPENSE}" 
+                                ${selectedTransactionType === TRANSACTION_TYPES.EXPENSE ? 'checked' : ''}
+                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.EXPENSE}')">
+                            <div class="flex items-center gap-2 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-red-500 peer-checked:bg-red-50 transition">
+                                <i data-lucide="shopping-bag" class="w-4 h-4 text-red-500"></i>
+                                <span class="text-sm font-medium">Expense</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.INVESTMENT}" 
+                                ${selectedTransactionType === TRANSACTION_TYPES.INVESTMENT ? 'checked' : ''}
+                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.INVESTMENT}')">
+                            <div class="flex items-center gap-2 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 transition">
+                                <i data-lucide="trending-up" class="w-4 h-4 text-blue-500"></i>
+                                <span class="text-sm font-medium">Investment</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.TRANSFER}" 
+                                ${selectedTransactionType === TRANSACTION_TYPES.TRANSFER ? 'checked' : ''}
+                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.TRANSFER}')">
+                            <div class="flex items-center gap-2 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-cyan-500 peer-checked:bg-cyan-50 transition">
+                                <i data-lucide="send" class="w-4 h-4 text-cyan-500"></i>
+                                <span class="text-sm font-medium">Transfer</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.COMMITMENT}" 
+                                ${selectedTransactionType === TRANSACTION_TYPES.COMMITMENT ? 'checked' : ''}
+                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.COMMITMENT}')">
+                            <div class="flex items-center gap-2 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-orange-500 peer-checked:bg-orange-50 transition">
+                                <i data-lucide="home" class="w-4 h-4 text-orange-500"></i>
+                                <span class="text-sm font-medium">Commitment</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
                     <div class="relative">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">${currencySymbol}</span>
                         <input type="number" name="amount" required min="0.01" step="0.01"
-                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-${typeColor}-500 focus:border-transparent outline-none"
                             placeholder="0.00">
                     </div>
                 </div>
@@ -448,20 +602,22 @@ function renderAddExpense() {
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <input type="text" name="description" required
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                        placeholder="What did you spend on?">
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-${typeColor}-500 focus:border-transparent outline-none"
+                        placeholder="${getTransactionPlaceholder(selectedTransactionType)}">
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        ${categories.map(cat => `
+                    <label class="block text-sm font-medium text-gray-700 mb-1">${typeLabel} Category</label>
+                    <div class="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+                        ${typeCategories.map((cat, idx) => `
                             <label class="cursor-pointer">
                                 <input type="radio" name="category" value="${cat.id}" required class="peer sr-only"
-                                    ${cat.id === 'food' ? 'checked' : ''}>
-                                <div class="flex items-center gap-2 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-indigo-500 peer-checked:bg-indigo-50 transition">
-                                    <div class="w-3 h-3 rounded-full" style="background-color: ${cat.color}"></div>
-                                    <span class="text-sm">${cat.name}</span>
+                                    ${idx === 0 ? 'checked' : ''}>
+                                <div class="flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-${typeColor}-500 peer-checked:bg-${typeColor}-50 transition">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: ${cat.color}20">
+                                        <i data-lucide="${cat.icon}" class="w-4 h-4" style="color: ${cat.color}"></i>
+                                    </div>
+                                    <span class="text-sm font-medium">${cat.name}</span>
                                 </div>
                             </label>
                         `).join('')}
@@ -471,11 +627,11 @@ function renderAddExpense() {
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
                     <input type="date" name="date" required value="${today}"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-${typeColor}-500 focus:border-transparent outline-none">
                 </div>
                 
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition">
-                    Add Expense
+                <button type="submit" class="w-full bg-${typeColor}-600 hover:bg-${typeColor}-700 text-white font-medium py-3 rounded-lg transition">
+                    Add ${typeLabel}
                 </button>
             </form>
         </div>
@@ -624,6 +780,8 @@ function renderAnalytics() {
 function renderExpenseItem(expense) {
     const cat = categories.find(c => c.id === expense.category);
     const currencySymbol = getCurrencySymbol();
+    const typeBadge = getTypeBadge(expense.type || TRANSACTION_TYPES.EXPENSE);
+    
     return `
         <div class="flex items-center justify-between py-2">
             <div class="flex items-center gap-3">
@@ -632,12 +790,30 @@ function renderExpenseItem(expense) {
                 </div>
                 <div>
                     <p class="font-medium text-gray-800">${expense.description}</p>
-                    <p class="text-xs text-gray-500">${new Date(expense.date).toLocaleDateString()}</p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500">${new Date(expense.date).toLocaleDateString()}</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full ${typeBadge.class}" style="background-color: ${typeBadge.bg}; color: ${typeBadge.color}">${typeBadge.label}</span>
+                    </div>
                 </div>
             </div>
             <span class="font-semibold text-gray-800">${currencySymbol}${expense.amount.toFixed(2)}</span>
         </div>
     `;
+}
+
+function getTypeBadge(type) {
+    switch(type) {
+        case TRANSACTION_TYPES.EXPENSE:
+            return { label: 'Expense', class: 'bg-red-100 text-red-700', bg: '#FEE2E2', color: '#B91C1C' };
+        case TRANSACTION_TYPES.INVESTMENT:
+            return { label: 'Investment', class: 'bg-blue-100 text-blue-700', bg: '#DBEAFE', color: '#1D4ED8' };
+        case TRANSACTION_TYPES.TRANSFER:
+            return { label: 'Transfer', class: 'bg-cyan-100 text-cyan-700', bg: '#CFFAFE', color: '#0E7490' };
+        case TRANSACTION_TYPES.COMMITMENT:
+            return { label: 'Commitment', class: 'bg-orange-100 text-orange-700', bg: '#FFEDD5', color: '#C2410C' };
+        default:
+            return { label: 'Expense', class: 'bg-red-100 text-red-700', bg: '#FEE2E2', color: '#B91C1C' };
+    }
 }
 
 // Helper Functions
@@ -704,37 +880,58 @@ function getYearlyComparison(expenses) {
 
 function generateInsights(expenses, categoryTotals) {
     const insights = [];
-    const total = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
     const currencySymbol = getCurrencySymbol();
     
-    if (total === 0) {
-        insights.push("Start adding expenses to see personalized insights.");
+    // Get current month transactions
+    const currentMonthTransactions = getCurrentMonthTransactions(expenses);
+    
+    if (currentMonthTransactions.length === 0) {
+        insights.push("Start adding transactions to see personalized insights.");
         return insights;
     }
     
-    // Top category
-    const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
+    // Calculate by type
+    const expenses = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.EXPENSE).reduce((sum, t) => sum + t.amount, 0);
+    const investments = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.INVESTMENT).reduce((sum, t) => sum + t.amount, 0);
+    const transfers = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.TRANSFER).reduce((sum, t) => sum + t.amount, 0);
+    const commitments = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.COMMITMENT).reduce((sum, t) => sum + t.amount, 0);
+    
+    const totalOutflow = expenses + investments + transfers + commitments;
+    const income = StorageManager.getIncome();
+    const savings = income - totalOutflow;
+    const savingsRate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
+    
+    // Top spending category
+    const expenseTransactions = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.EXPENSE);
+    const expenseByCategory = {};
+    expenseTransactions.forEach(t => {
+        expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amount;
+    });
+    const topCategory = Object.entries(expenseByCategory).sort((a, b) => b[1] - a[1])[0];
     if (topCategory) {
         const catName = getCategoryName(topCategory[0]);
-        const percentage = ((topCategory[1] / total) * 100).toFixed(1);
-        insights.push(`You spend most on ${catName} (${percentage}% of total).`);
+        insights.push(`Top expense: ${catName} (${currencySymbol}${topCategory[1].toFixed(0)})`);
     }
     
-    // Monthly average
-    const monthlyData = getMonthlyData(expenses);
-    const months = Object.keys(monthlyData).length;
-    const avgMonthly = total / (months || 1);
-    insights.push(`Your average monthly spending is ${currencySymbol}${avgMonthly.toFixed(2)}.`);
+    // Investment insights
+    if (investments > 0) {
+        const investPercent = ((investments / income) * 100).toFixed(1);
+        insights.push(`Great! You're investing ${investPercent}% of income (${currencySymbol}${investments.toFixed(0)})`);
+    }
     
-    // Budget status
-    const budget = StorageManager.getBudget();
-    const currentMonth = getCurrentMonthExpenses(expenses).reduce((sum, e) => sum + e.amount, 0);
-    const percentUsed = (currentMonth / budget) * 100;
+    // Savings insights
+    if (savingsRate > 20) {
+        insights.push(`Excellent savings rate: ${savingsRate}% (${currencySymbol}${savings.toFixed(0)}) 🎉`);
+    } else if (savingsRate > 0) {
+        insights.push(`Savings rate: ${savingsRate}% (${currencySymbol}${savings.toFixed(0)})`);
+    } else if (savingsRate < 0) {
+        insights.push(`⚠️ Spending exceeds income by ${currencySymbol}${Math.abs(savings).toFixed(0)}`);
+    }
     
-    if (percentUsed > 90) {
-        insights.push(`You've used ${percentUsed.toFixed(0)}% of your monthly budget!`);
-    } else if (percentUsed < 50) {
-        insights.push(`You're doing great! Only ${percentUsed.toFixed(0)}% of budget used.`);
+    // Commitments check
+    if (commitments > 0) {
+        const commitPercent = ((commitments / income) * 100).toFixed(1);
+        insights.push(`Fixed commitments: ${commitPercent}% of income (${currencySymbol}${commitments.toFixed(0)})`);
     }
     
     return insights;
@@ -906,23 +1103,97 @@ function setPeriod(period) {
     renderApp();
 }
 
-function handleExpenseSubmit(e) {
+function handleTransactionSubmit(e) {
     e.preventDefault();
     const form = e.target;
-    const expense = {
+    const transaction = {
         amount: parseFloat(form.amount.value),
         description: form.description.value,
         category: form.category.value,
-        date: form.date.value
+        date: form.date.value,
+        type: selectedTransactionType  // Store the transaction type
     };
     
-    StorageManager.addExpense(expense);
+    StorageManager.addExpense(transaction);
     form.reset();
     form.date.value = new Date().toISOString().split('T')[0];
     
-    // Show success message
-    alert('Expense added successfully!');
+    const typeLabel = getTransactionTypeLabel(selectedTransactionType);
+    alert(`${typeLabel} added successfully!`);
     setView('dashboard');
+}
+
+function setTransactionType(type) {
+    selectedTransactionType = type;
+    renderApp();
+}
+
+function getCategoriesByType(type) {
+    switch(type) {
+        case TRANSACTION_TYPES.EXPENSE:
+            return expenseCategories;
+        case TRANSACTION_TYPES.INVESTMENT:
+            return investmentCategories;
+        case TRANSACTION_TYPES.TRANSFER:
+            return transferCategories;
+        case TRANSACTION_TYPES.COMMITMENT:
+            return commitmentCategories;
+        default:
+            return expenseCategories;
+    }
+}
+
+function getTransactionTypeLabel(type) {
+    switch(type) {
+        case TRANSACTION_TYPES.EXPENSE:
+            return 'Expense';
+        case TRANSACTION_TYPES.INVESTMENT:
+            return 'Investment';
+        case TRANSACTION_TYPES.TRANSFER:
+            return 'Transfer';
+        case TRANSACTION_TYPES.COMMITMENT:
+            return 'Commitment';
+        default:
+            return 'Transaction';
+    }
+}
+
+function getTransactionTypeColor(type) {
+    switch(type) {
+        case TRANSACTION_TYPES.EXPENSE:
+            return 'red';
+        case TRANSACTION_TYPES.INVESTMENT:
+            return 'blue';
+        case TRANSACTION_TYPES.TRANSFER:
+            return 'cyan';
+        case TRANSACTION_TYPES.COMMITMENT:
+            return 'orange';
+        default:
+            return 'indigo';
+    }
+}
+
+function getTransactionPlaceholder(type) {
+    switch(type) {
+        case TRANSACTION_TYPES.EXPENSE:
+            return 'What did you spend on?';
+        case TRANSACTION_TYPES.INVESTMENT:
+            return 'e.g., SIP Mutual Fund Investment';
+        case TRANSACTION_TYPES.TRANSFER:
+            return 'e.g., Money sent to home';
+        case TRANSACTION_TYPES.COMMITMENT:
+            return 'e.g., House Rent, Loan EMI';
+        default:
+            return 'Enter description';
+    }
+}
+
+function getCurrentMonthTransactions(expenses) {
+    const now = new Date();
+    return expenses.filter(e => {
+        const date = new Date(e.date);
+        return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    });
 }
 
 function deleteExpense(id) {
@@ -932,19 +1203,30 @@ function deleteExpense(id) {
     }
 }
 
-function editBudget() {
-    const currentBudget = StorageManager.getBudget();
-    const newBudget = prompt('Enter your monthly budget:', currentBudget);
-    if (newBudget && !isNaN(newBudget) && parseFloat(newBudget) > 0) {
-        StorageManager.saveBudget(parseFloat(newBudget));
+function editIncome() {
+    const currentIncome = StorageManager.getIncome();
+    const newIncome = prompt('Enter your monthly income:', currentIncome);
+    if (newIncome && !isNaN(newIncome) && parseFloat(newIncome) > 0) {
+        StorageManager.saveIncome(parseFloat(newIncome));
         renderApp();
     }
 }
 
+// Backward compatibility
+function editBudget() {
+    editIncome();
+}
+
 function exportData() {
     const expenses = StorageManager.getExpenses();
-    const budget = StorageManager.getBudget();
-    const data = { expenses, budget, exportDate: new Date().toISOString() };
+    const income = StorageManager.getIncome();
+    const user = StorageManager.getUserProfile();
+    const data = { 
+        expenses, 
+        income, 
+        user,
+        exportDate: new Date().toISOString() 
+    };
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -984,11 +1266,16 @@ function saveProfileAndContinue(e) {
     nextOnboardingStep();
 }
 
-function saveBudgetAndContinue(e) {
+function saveIncomeAndContinue(e) {
     e.preventDefault();
     const form = e.target;
-    StorageManager.saveBudget(parseFloat(form.monthlyBudget.value));
+    StorageManager.saveIncome(parseFloat(form.monthlyIncome.value));
     nextOnboardingStep();
+}
+
+// Backward compatibility
+function saveBudgetAndContinue(e) {
+    saveIncomeAndContinue(e);
 }
 
 function saveCurrencyAndContinue(e) {
