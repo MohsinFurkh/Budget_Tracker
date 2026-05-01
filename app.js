@@ -891,12 +891,12 @@ function generateInsights(expenses, categoryTotals) {
     }
     
     // Calculate by type
-    const expenses = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.EXPENSE).reduce((sum, t) => sum + t.amount, 0);
+    const expenseAmount = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.EXPENSE).reduce((sum, t) => sum + t.amount, 0);
     const investments = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.INVESTMENT).reduce((sum, t) => sum + t.amount, 0);
     const transfers = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.TRANSFER).reduce((sum, t) => sum + t.amount, 0);
     const commitments = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.COMMITMENT).reduce((sum, t) => sum + t.amount, 0);
     
-    const totalOutflow = expenses + investments + transfers + commitments;
+    const totalOutflow = expenseAmount + investments + transfers + commitments;
     const income = StorageManager.getIncome();
     const savings = income - totalOutflow;
     const savingsRate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
