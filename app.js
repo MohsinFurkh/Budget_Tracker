@@ -1300,3 +1300,6 @@ function getCurrencySymbol() {
     const currency = currencies.find(c => c.code === user?.currency) || currencies[0];
     return currency.symbol;
 }
+
+// Initialize the app when the page loads
+document.addEventListener('DOMContentLoaded', renderApp);
