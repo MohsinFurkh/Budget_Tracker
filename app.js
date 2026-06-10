@@ -49,63 +49,63 @@ const StorageManager = {
     INCOME_KEY: 'monthly_income',  // Changed from budget to income
     USER_KEY: 'user_profile',
     ONBOARDING_KEY: 'onboarding_complete',
-    
+
     getExpenses() {
         const data = localStorage.getItem(this.EXPENSES_KEY);
         return data ? JSON.parse(data) : [];
     },
-    
+
     saveExpenses(expenses) {
         localStorage.setItem(this.EXPENSES_KEY, JSON.stringify(expenses));
     },
-    
+
     // Income methods (replaced budget)
     getIncome() {
         const data = localStorage.getItem(this.INCOME_KEY);
         return data ? JSON.parse(data) : 5000;
     },
-    
+
     saveIncome(income) {
         localStorage.setItem(this.INCOME_KEY, JSON.stringify(income));
     },
-    
+
     // Backward compatibility - redirect budget calls to income
     getBudget() {
         return this.getIncome();
     },
-    
+
     saveBudget(budget) {
         this.saveIncome(budget);
     },
-    
+
     getUserProfile() {
         const data = localStorage.getItem(this.USER_KEY);
         return data ? JSON.parse(data) : null;
     },
-    
+
     saveUserProfile(profile) {
         localStorage.setItem(this.USER_KEY, JSON.stringify(profile));
     },
-    
+
     isOnboardingComplete() {
         return localStorage.getItem(this.ONBOARDING_KEY) === 'true';
     },
-    
+
     completeOnboarding() {
         localStorage.setItem(this.ONBOARDING_KEY, 'true');
     },
-    
+
     resetOnboarding() {
         localStorage.removeItem(this.ONBOARDING_KEY);
     },
-    
+
     addExpense(expense) {
         const expenses = this.getExpenses();
         expenses.push({ ...expense, id: Date.now() });
         this.saveExpenses(expenses);
         return expenses;
     },
-    
+
     deleteExpense(id) {
         const expenses = this.getExpenses().filter(e => e.id !== id);
         this.saveExpenses(expenses);
@@ -116,6 +116,8 @@ const StorageManager = {
 // App State
 let currentView = 'dashboard';
 let selectedPeriod = 'month';
+let selectedReportMonth = new Date().toISOString().slice(0, 7);
+let historyFilter = 'all';
 let chartInstances = {};
 let onboardingStep = 1;
 const currencies = [
@@ -140,36 +142,39 @@ document.addEventListener('DOMContentLoaded', () => {
 // Render Functions
 function renderApp() {
     const app = document.getElementById('app');
-    
+
     // Check if onboarding is needed
     if (!StorageManager.isOnboardingComplete()) {
         app.innerHTML = renderOnboarding();
         lucide.createIcons();
         return;
     }
-    
+
     const user = StorageManager.getUserProfile();
     const currency = user?.currency || 'USD';
     selectedCurrency = currency;
-    
+
     app.innerHTML = `
         <div class="flex flex-col min-h-screen">
             ${renderHeader()}
             <main class="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
-                ${currentView === 'dashboard' ? renderDashboard() : 
-                  currentView === 'add' ? renderAddExpense() :
-                  currentView === 'history' ? renderHistory() :
-                  currentView === 'analytics' ? renderAnalytics() : ''}
+                ${currentView === 'dashboard' ? renderDashboard() :
+            currentView === 'add' ? renderAddExpense() :
+                currentView === 'history' ? renderHistory() :
+                    currentView === 'analytics' ? renderAnalytics() :
+                        currentView === 'report' ? renderMonthlyReport() : ''}
             </main>
             ${renderBottomNav()}
         </div>
     `;
     lucide.createIcons();
-    
+
     if (currentView === 'dashboard') {
         setTimeout(initDashboardCharts, 0);
     } else if (currentView === 'analytics') {
         setTimeout(initAnalyticsCharts, 0);
+    } else if (currentView === 'report') {
+        setTimeout(initReportCharts, 0);
     }
 }
 
@@ -181,7 +186,7 @@ function renderOnboarding() {
         4: renderCurrencyStep,
         5: renderReadyStep
     };
-    
+
     const stepRenderer = steps[onboardingStep] || steps[1];
     return `
         <div class="min-h-screen gradient-bg flex items-center justify-center p-4">
@@ -318,7 +323,7 @@ function renderReadyStep() {
     const user = StorageManager.getUserProfile();
     const income = StorageManager.getIncome();
     const currency = currencies.find(c => c.code === user?.currency) || currencies[0];
-    
+
     return `
         <div class="text-center">
             <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -353,7 +358,7 @@ function renderHeader() {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const user = StorageManager.getUserProfile();
     const greeting = user?.name ? `Hi, ${user.name}!` : 'Budget Tracker';
-    
+
     return `
         <header class="gradient-bg text-white p-4 md:p-6">
             <div class="max-w-7xl mx-auto">
@@ -362,9 +367,15 @@ function renderHeader() {
                         <h1 class="text-2xl md:text-3xl font-bold">${greeting}</h1>
                         <p class="text-sm md:text-base opacity-90 mt-1">${today}</p>
                     </div>
-                    <button onclick="exportData()" class="bg-white/20 hover:bg-white/30 rounded-lg p-2 transition">
-                        <i data-lucide="download" class="w-5 h-5"></i>
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="document.getElementById('importFile').click()" class="bg-white/20 hover:bg-white/30 rounded-lg p-2 transition" title="Import Data">
+                            <i data-lucide="upload" class="w-5 h-5"></i>
+                        </button>
+                        <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+                        <button onclick="exportData()" class="bg-white/20 hover:bg-white/30 rounded-lg p-2 transition" title="Export Data">
+                            <i data-lucide="download" class="w-5 h-5"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </header>
@@ -376,9 +387,10 @@ function renderBottomNav() {
         { id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' },
         { id: 'add', icon: 'plus-circle', label: 'Add' },
         { id: 'history', icon: 'history', label: 'History' },
-        { id: 'analytics', icon: 'bar-chart-3', label: 'Analytics' }
+        { id: 'analytics', icon: 'bar-chart-3', label: 'Analytics' },
+        { id: 'report', icon: 'file-text', label: 'Report' }
     ];
-    
+
     return `
         <nav class="bg-white border-t border-gray-200 sticky bottom-0 z-50">
             <div class="max-w-7xl mx-auto">
@@ -400,30 +412,30 @@ function renderDashboard() {
     const expenses = StorageManager.getExpenses();
     const monthlyIncome = StorageManager.getIncome();
     const currentMonthTransactions = getCurrentMonthTransactions(expenses);
-    
+
     // Calculate totals by type
     const totalExpenses = currentMonthTransactions
         .filter(t => t.type === TRANSACTION_TYPES.EXPENSE)
         .reduce((sum, t) => sum + t.amount, 0);
-    
+
     const totalInvestments = currentMonthTransactions
         .filter(t => t.type === TRANSACTION_TYPES.INVESTMENT)
         .reduce((sum, t) => sum + t.amount, 0);
-    
+
     const totalTransfers = currentMonthTransactions
         .filter(t => t.type === TRANSACTION_TYPES.TRANSFER)
         .reduce((sum, t) => sum + t.amount, 0);
-    
+
     const totalCommitments = currentMonthTransactions
         .filter(t => t.type === TRANSACTION_TYPES.COMMITMENT)
         .reduce((sum, t) => sum + t.amount, 0);
-    
+
     const totalOutflow = totalExpenses + totalInvestments + totalTransfers + totalCommitments;
     const savings = monthlyIncome - totalOutflow;
     const savingsPercent = monthlyIncome > 0 ? (savings / monthlyIncome) * 100 : 0;
-    
+
     const currencySymbol = getCurrencySymbol();
-    
+
     return `
         <div class="space-y-6">
             <!-- Main Summary: Income & Savings -->
@@ -537,11 +549,11 @@ let selectedTransactionType = TRANSACTION_TYPES.EXPENSE;
 function renderAddExpense() {
     const today = new Date().toISOString().split('T')[0];
     const currencySymbol = getCurrencySymbol();
-    
+
     const typeCategories = getCategoriesByType(selectedTransactionType);
     const typeLabel = getTransactionTypeLabel(selectedTransactionType);
     const typeColor = getTransactionTypeColor(selectedTransactionType);
-    
+
     return `
         <div class="max-w-md mx-auto">
             <h2 class="text-2xl font-bold text-gray-800 mb-6">Add Transaction</h2>
@@ -639,18 +651,32 @@ function renderAddExpense() {
 }
 
 function renderHistory() {
-    const expenses = StorageManager.getExpenses().sort((a, b) => new Date(b.date) - new Date(a.date));
+    let expenses = StorageManager.getExpenses().sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    const now = new Date();
+    if (historyFilter === 'month') {
+        expenses = expenses.filter(e => {
+            const d = new Date(e.date);
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+    } else if (historyFilter === 'year') {
+        expenses = expenses.filter(e => {
+            const d = new Date(e.date);
+            return d.getFullYear() === now.getFullYear();
+        });
+    }
+
     const grouped = groupExpensesByMonth(expenses);
     const currencySymbol = getCurrencySymbol();
-    
+
     return `
         <div>
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-2xl font-bold text-gray-800">Expense History</h2>
                 <select onchange="filterHistory(this.value)" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                    <option value="all">All Time</option>
-                    <option value="month">This Month</option>
-                    <option value="year">This Year</option>
+                    <option value="all" ${historyFilter === 'all' ? 'selected' : ''}>All Time</option>
+                    <option value="month" ${historyFilter === 'month' ? 'selected' : ''}>This Month</option>
+                    <option value="year" ${historyFilter === 'year' ? 'selected' : ''}>This Year</option>
                 </select>
             </div>
             
@@ -698,7 +724,7 @@ function renderAnalytics() {
     const categoryTotals = getCategoryTotals(expenses);
     const yearlyComparison = getYearlyComparison(expenses);
     const currencySymbol = getCurrencySymbol();
-    
+
     return `
         <div class="space-y-6">
             <h2 class="text-2xl font-bold text-gray-800">Analytics</h2>
@@ -730,11 +756,11 @@ function renderAnalytics() {
                 <h3 class="font-semibold text-gray-800 mb-4">Category Breakdown</h3>
                 <div class="space-y-3">
                     ${Object.entries(categoryTotals)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([catId, total]) => {
-                            const cat = categories.find(c => c.id === catId);
-                            const percentage = (total / Object.values(categoryTotals).reduce((a, b) => a + b, 0) * 100).toFixed(1);
-                            return `
+            .sort((a, b) => b[1] - a[1])
+            .map(([catId, total]) => {
+                const cat = categories.find(c => c.id === catId);
+                const percentage = (total / Object.values(categoryTotals).reduce((a, b) => a + b, 0) * 100).toFixed(1);
+                return `
                                 <div class="flex items-center gap-4">
                                     <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${cat.color}20">
                                         <i data-lucide="${cat.icon}" class="w-5 h-5" style="color: ${cat.color}"></i>
@@ -751,7 +777,7 @@ function renderAnalytics() {
                                     <span class="text-sm text-gray-500 w-12 text-right">${percentage}%</span>
                                 </div>
                             `;
-                        }).join('')}
+            }).join('')}
                 </div>
             </div>
             
@@ -781,7 +807,7 @@ function renderExpenseItem(expense) {
     const cat = categories.find(c => c.id === expense.category);
     const currencySymbol = getCurrencySymbol();
     const typeBadge = getTypeBadge(expense.type || TRANSACTION_TYPES.EXPENSE);
-    
+
     return `
         <div class="flex items-center justify-between py-2">
             <div class="flex items-center gap-3">
@@ -802,7 +828,7 @@ function renderExpenseItem(expense) {
 }
 
 function getTypeBadge(type) {
-    switch(type) {
+    switch (type) {
         case TRANSACTION_TYPES.EXPENSE:
             return { label: 'Expense', class: 'bg-red-100 text-red-700', bg: '#FEE2E2', color: '#B91C1C' };
         case TRANSACTION_TYPES.INVESTMENT:
@@ -881,26 +907,26 @@ function getYearlyComparison(expenses) {
 function generateInsights(expenses, categoryTotals) {
     const insights = [];
     const currencySymbol = getCurrencySymbol();
-    
+
     // Get current month transactions
     const currentMonthTransactions = getCurrentMonthTransactions(expenses);
-    
+
     if (currentMonthTransactions.length === 0) {
         insights.push("Start adding transactions to see personalized insights.");
         return insights;
     }
-    
+
     // Calculate by type
     const expenseAmount = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.EXPENSE).reduce((sum, t) => sum + t.amount, 0);
     const investments = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.INVESTMENT).reduce((sum, t) => sum + t.amount, 0);
     const transfers = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.TRANSFER).reduce((sum, t) => sum + t.amount, 0);
     const commitments = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.COMMITMENT).reduce((sum, t) => sum + t.amount, 0);
-    
+
     const totalOutflow = expenseAmount + investments + transfers + commitments;
     const income = StorageManager.getIncome();
     const savings = income - totalOutflow;
     const savingsRate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
-    
+
     // Top spending category
     const expenseTransactions = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.EXPENSE);
     const expenseByCategory = {};
@@ -912,13 +938,13 @@ function generateInsights(expenses, categoryTotals) {
         const catName = getCategoryName(topCategory[0]);
         insights.push(`Top expense: ${catName} (${currencySymbol}${topCategory[1].toFixed(0)})`);
     }
-    
+
     // Investment insights
     if (investments > 0) {
         const investPercent = ((investments / income) * 100).toFixed(1);
         insights.push(`Great! You're investing ${investPercent}% of income (${currencySymbol}${investments.toFixed(0)})`);
     }
-    
+
     // Savings insights
     if (savingsRate > 20) {
         insights.push(`Excellent savings rate: ${savingsRate}% (${currencySymbol}${savings.toFixed(0)}) 🎉`);
@@ -927,13 +953,13 @@ function generateInsights(expenses, categoryTotals) {
     } else if (savingsRate < 0) {
         insights.push(`⚠️ Spending exceeds income by ${currencySymbol}${Math.abs(savings).toFixed(0)}`);
     }
-    
+
     // Commitments check
     if (commitments > 0) {
         const commitPercent = ((commitments / income) * 100).toFixed(1);
         insights.push(`Fixed commitments: ${commitPercent}% of income (${currencySymbol}${commitments.toFixed(0)})`);
     }
-    
+
     return insights;
 }
 
@@ -942,13 +968,13 @@ function initDashboardCharts() {
     const expenses = StorageManager.getExpenses();
     const ctx1 = document.getElementById('dailyChart');
     const ctx2 = document.getElementById('categoryChart');
-    
+
     if (!ctx1 || !ctx2) return;
-    
+
     // Destroy existing charts
     if (chartInstances.daily) chartInstances.daily.destroy();
     if (chartInstances.category) chartInstances.category.destroy();
-    
+
     // Daily spending (last 7 days)
     const last7Days = {};
     for (let i = 6; i >= 0; i--) {
@@ -957,7 +983,7 @@ function initDashboardCharts() {
         const key = date.toLocaleDateString('en-US', { weekday: 'short' });
         last7Days[key] = 0;
     }
-    
+
     expenses.filter(e => {
         const date = new Date(e.date);
         const daysDiff = (new Date() - date) / (1000 * 60 * 60 * 24);
@@ -968,7 +994,7 @@ function initDashboardCharts() {
             last7Days[key] += e.amount;
         }
     });
-    
+
     chartInstances.daily = new Chart(ctx1, {
         type: 'bar',
         data: {
@@ -986,11 +1012,11 @@ function initDashboardCharts() {
             scales: { y: { beginAtZero: true } }
         }
     });
-    
+
     // Category distribution
     const categoryTotals = getCategoryTotals(getCurrentMonthExpenses(expenses));
     const catData = categories.map(c => categoryTotals[c.id] || 0);
-    
+
     chartInstances.category = new Chart(ctx2, {
         type: 'doughnut',
         data: {
@@ -1013,18 +1039,18 @@ function initAnalyticsCharts() {
     const ctx1 = document.getElementById('trendChart');
     const ctx2 = document.getElementById('distributionChart');
     const ctx3 = document.getElementById('comparisonChart');
-    
+
     if (!ctx1 || !ctx2 || !ctx3) return;
-    
+
     // Destroy existing charts
     Object.values(chartInstances).forEach(chart => chart?.destroy());
-    
+
     // Trend chart
     const monthlyData = getMonthlyData(expenses);
     const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
         return new Date(a) - new Date(b);
     }).slice(-12);
-    
+
     chartInstances.trend = new Chart(ctx1, {
         type: 'line',
         data: {
@@ -1044,7 +1070,7 @@ function initAnalyticsCharts() {
             scales: { y: { beginAtZero: true } }
         }
     });
-    
+
     // Distribution chart
     const categoryTotals = getCategoryTotals(expenses);
     chartInstances.distribution = new Chart(ctx2, {
@@ -1065,11 +1091,11 @@ function initAnalyticsCharts() {
             }
         }
     });
-    
+
     // Comparison chart
     const yearlyData = getYearlyComparison(expenses);
     const years = Object.keys(yearlyData).sort();
-    
+
     if (years.length >= 2) {
         const colors = ['#667eea', '#764ba2', '#4ECDC4'];
         chartInstances.comparison = new Chart(ctx3, {
@@ -1113,11 +1139,11 @@ function handleTransactionSubmit(e) {
         date: form.date.value,
         type: selectedTransactionType  // Store the transaction type
     };
-    
+
     StorageManager.addExpense(transaction);
     form.reset();
     form.date.value = new Date().toISOString().split('T')[0];
-    
+
     const typeLabel = getTransactionTypeLabel(selectedTransactionType);
     alert(`${typeLabel} added successfully!`);
     setView('dashboard');
@@ -1129,7 +1155,7 @@ function setTransactionType(type) {
 }
 
 function getCategoriesByType(type) {
-    switch(type) {
+    switch (type) {
         case TRANSACTION_TYPES.EXPENSE:
             return expenseCategories;
         case TRANSACTION_TYPES.INVESTMENT:
@@ -1144,7 +1170,7 @@ function getCategoriesByType(type) {
 }
 
 function getTransactionTypeLabel(type) {
-    switch(type) {
+    switch (type) {
         case TRANSACTION_TYPES.EXPENSE:
             return 'Expense';
         case TRANSACTION_TYPES.INVESTMENT:
@@ -1159,7 +1185,7 @@ function getTransactionTypeLabel(type) {
 }
 
 function getTransactionTypeColor(type) {
-    switch(type) {
+    switch (type) {
         case TRANSACTION_TYPES.EXPENSE:
             return 'red';
         case TRANSACTION_TYPES.INVESTMENT:
@@ -1174,7 +1200,7 @@ function getTransactionTypeColor(type) {
 }
 
 function getTransactionPlaceholder(type) {
-    switch(type) {
+    switch (type) {
         case TRANSACTION_TYPES.EXPENSE:
             return 'What did you spend on?';
         case TRANSACTION_TYPES.INVESTMENT:
@@ -1221,13 +1247,13 @@ function exportData() {
     const expenses = StorageManager.getExpenses();
     const income = StorageManager.getIncome();
     const user = StorageManager.getUserProfile();
-    const data = { 
-        expenses, 
-        income, 
+    const data = {
+        expenses,
+        income,
         user,
-        exportDate: new Date().toISOString() 
+        exportDate: new Date().toISOString()
     };
-    
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1237,8 +1263,38 @@ function exportData() {
     URL.revokeObjectURL(url);
 }
 
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.expenses !== undefined && data.income !== undefined) {
+                StorageManager.saveExpenses(data.expenses);
+                StorageManager.saveIncome(data.income);
+                if (data.user) {
+                    StorageManager.saveUserProfile(data.user);
+                }
+                StorageManager.completeOnboarding();
+                renderApp();
+                alert('Data imported successfully!');
+            } else {
+                alert('Invalid data format. Ensure the file contains valid budget tracker data.');
+            }
+        } catch (error) {
+            console.error('Error parsing JSON:', error);
+            alert('Failed to import data. Invalid JSON file.');
+        }
+    };
+    reader.readAsText(file);
+    // Reset file input so the same file can be imported again if needed
+    event.target.value = '';
+}
+
 function filterHistory(value) {
-    // Re-render with filter (simplified)
+    historyFilter = value;
     renderApp();
 }
 
@@ -1299,6 +1355,165 @@ function getCurrencySymbol() {
     const user = StorageManager.getUserProfile();
     const currency = currencies.find(c => c.code === user?.currency) || currencies[0];
     return currency.symbol;
+}
+
+function renderMonthlyReport() {
+    const expenses = StorageManager.getExpenses();
+    const currencySymbol = getCurrencySymbol();
+
+    // Filter by selected month
+    const [year, month] = selectedReportMonth.split('-');
+    const reportMonthExpenses = expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getFullYear() === parseInt(year) && d.getMonth() === parseInt(month) - 1;
+    });
+
+    const totals = {
+        [TRANSACTION_TYPES.EXPENSE]: 0,
+        [TRANSACTION_TYPES.INVESTMENT]: 0,
+        [TRANSACTION_TYPES.TRANSFER]: 0,
+        [TRANSACTION_TYPES.COMMITMENT]: 0
+    };
+
+    reportMonthExpenses.forEach(e => {
+        if (totals[e.type] !== undefined) {
+            totals[e.type] += e.amount;
+        } else {
+            totals[TRANSACTION_TYPES.EXPENSE] += e.amount;
+        }
+    });
+
+    const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+
+    return `
+        <div class="space-y-6 max-w-4xl mx-auto">
+        <div class="flex flex-col sm:flex-row justify-between items-center bg-white p-5 rounded-xl card-shadow gap-4">
+            <h2 class="text-2xl font-bold text-gray-800">Monthly Report</h2>
+            <input type="month" value="${selectedReportMonth}" onchange="setReportMonth(event.target.value)"
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Chart -->
+            <div class="bg-white p-5 rounded-xl card-shadow flex flex-col items-center justify-center">
+                <h3 class="font-semibold text-gray-800 mb-4 w-full text-left">Distribution</h3>
+                ${grandTotal > 0 ? `<div class="w-full max-w-xs"><canvas id="reportChart" height="250"></canvas></div>` :
+                    `<div class="py-12 text-gray-500 flex flex-col items-center">
+                            <i data-lucide="pie-chart" class="w-12 h-12 mb-2 opacity-50"></i>
+                            <p>No transactions for this month</p>
+                        </div>`}
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white p-5 rounded-xl card-shadow overflow-hidden">
+                <h3 class="font-semibold text-gray-800 mb-4">Summary Table</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b-2 border-gray-100 text-gray-500 text-sm">
+                                <th class="py-3 font-medium">Category</th>
+                                <th class="py-3 font-medium text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr>
+                                <td class="py-3 flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-red-500"></div> Expenses
+                                </td>
+                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.EXPENSE].toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-blue-500"></div> Investments
+                                </td>
+                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.INVESTMENT].toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-cyan-500"></div> Transfers
+                                </td>
+                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.TRANSFER].toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-orange-500"></div> Commitments
+                                </td>
+                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.COMMITMENT].toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-gray-50 font-bold text-gray-800">
+                                <td class="py-3 px-2 rounded-l-lg">Total Outflow</td>
+                                <td class="py-3 px-2 text-right rounded-r-lg">${currencySymbol}${grandTotal.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function setReportMonth(monthStr) {
+    if (!monthStr) return;
+    selectedReportMonth = monthStr;
+    renderApp();
+}
+
+function initReportCharts() {
+    const ctx = document.getElementById('reportChart');
+    if (!ctx) return;
+
+    if (chartInstances.report) chartInstances.report.destroy();
+
+    const expenses = StorageManager.getExpenses();
+    const [year, month] = selectedReportMonth.split('-');
+    const reportMonthExpenses = expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getFullYear() === parseInt(year) && d.getMonth() === parseInt(month) - 1;
+    });
+
+    const totals = {
+        [TRANSACTION_TYPES.EXPENSE]: 0,
+        [TRANSACTION_TYPES.INVESTMENT]: 0,
+        [TRANSACTION_TYPES.TRANSFER]: 0,
+        [TRANSACTION_TYPES.COMMITMENT]: 0
+    };
+
+    reportMonthExpenses.forEach(e => {
+        if (totals[e.type] !== undefined) {
+            totals[e.type] += e.amount;
+        } else {
+            totals[TRANSACTION_TYPES.EXPENSE] += e.amount;
+        }
+    });
+
+    const data = [
+        totals[TRANSACTION_TYPES.EXPENSE],
+        totals[TRANSACTION_TYPES.INVESTMENT],
+        totals[TRANSACTION_TYPES.TRANSFER],
+        totals[TRANSACTION_TYPES.COMMITMENT]
+    ];
+
+    if (data.every(val => val === 0)) return;
+
+    chartInstances.report = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Expenses', 'Investments', 'Transfers', 'Commitments'],
+            datasets: [{
+                data: data,
+                backgroundColor: ['#EF4444', '#3B82F6', '#06B6D4', '#F97316'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12 } }
+            }
+        }
+    });
 }
 
 // Initialize the app when the page loads
