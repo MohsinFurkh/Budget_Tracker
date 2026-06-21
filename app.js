@@ -1,52 +1,127 @@
-// Budget Tracker App
+// Budget Tracker App — 50/20/30 Framework
+// Needs (50%) | Wants (20%) | Savings & Financial Goals (30%)
 
-// Transaction Types
+// ─── Transaction Types (Buckets) ───────────────────────────────────────────────
 const TRANSACTION_TYPES = {
-    EXPENSE: 'expense',
-    INVESTMENT: 'investment',
-    TRANSFER: 'transfer',
-    COMMITMENT: 'commitment'
+    NEEDS: 'needs',
+    WANTS: 'wants',
+    SAVINGS: 'savings'
 };
 
-// Expense Categories
-const expenseCategories = [
-    { id: 'food', name: 'Food & Dining', icon: 'utensils', color: '#FF6B6B' },
-    { id: 'transport', name: 'Transportation', icon: 'car', color: '#4ECDC4' },
+// Budget allocation targets (percentage of income)
+const BUDGET_TARGETS = {
+    [TRANSACTION_TYPES.NEEDS]: 50,
+    [TRANSACTION_TYPES.WANTS]: 20,
+    [TRANSACTION_TYPES.SAVINGS]: 30
+};
+
+// ─── Needs Categories (50%) ────────────────────────────────────────────────────
+const needsCategories = [
+    { id: 'housing', name: 'Housing', icon: 'home', color: '#EF4444' },
+    { id: 'utilities', name: 'Utilities', icon: 'zap', color: '#F59E0B' },
+    { id: 'food_groceries', name: 'Food & Groceries', icon: 'shopping-cart', color: '#10B981' },
+    { id: 'transportation', name: 'Transportation', icon: 'car', color: '#4ECDC4' },
+    { id: 'insurance', name: 'Insurance', icon: 'shield', color: '#6366F1' },
+    { id: 'healthcare', name: 'Healthcare', icon: 'heart-pulse', color: '#EC4899' },
+    { id: 'education', name: 'Education', icon: 'book-open', color: '#8B5CF6' },
+    { id: 'childcare_kids', name: 'Childcare & Kids', icon: 'baby', color: '#F97316' },
+    { id: 'personal_care', name: 'Personal Care', icon: 'sparkles', color: '#14B8A6' },
+    { id: 'misc_essential', name: 'Miscellaneous (Essential)', icon: 'more-horizontal', color: '#78716C' }
+];
+
+// ─── Wants Categories (20%) ────────────────────────────────────────────────────
+const wantsCategories = [
+    { id: 'dining_out', name: 'Dining Out', icon: 'utensils', color: '#FF6B6B' },
     { id: 'shopping', name: 'Shopping', icon: 'shopping-bag', color: '#45B7D1' },
     { id: 'entertainment', name: 'Entertainment', icon: 'film', color: '#96CEB4' },
-    { id: 'bills', name: 'Bills & Utilities', icon: 'receipt', color: '#FFEAA7' },
-    { id: 'health', name: 'Health & Medical', icon: 'heart-pulse', color: '#DDA0DD' },
-    { id: 'education', name: 'Education', icon: 'book-open', color: '#98D8C8' },
-    { id: 'other_expense', name: 'Other Expenses', icon: 'more-horizontal', color: '#F7DC6F' }
+    { id: 'travel_vacation', name: 'Travel & Vacation', icon: 'plane', color: '#3B82F6' },
+    { id: 'gifts_donations', name: 'Gifts & Donations', icon: 'gift', color: '#A855F7' },
+    { id: 'subscriptions', name: 'Subscriptions', icon: 'tv', color: '#F43F5E' },
+    { id: 'childcare_optional', name: 'Childcare & Kids (Optional)', icon: 'gamepad-2', color: '#FB923C' }
 ];
 
-// Investment Categories
-const investmentCategories = [
-    { id: 'sip_mutual_fund', name: 'SIP - Mutual Funds', icon: 'trending-up', color: '#10B981' },
-    { id: 'stocks', name: 'Stocks', icon: 'bar-chart-2', color: '#3B82F6' },
-    { id: 'daughter_1', name: 'Daughter Account 1', icon: 'piggy-bank', color: '#EC4899' },
-    { id: 'daughter_2', name: 'Daughter Account 2', icon: 'piggy-bank', color: '#F59E0B' },
-    { id: 'other_investment', name: 'Other Investments', icon: 'landmark', color: '#8B5CF6' }
+// ─── Savings & Financial Goals Categories (30%) ────────────────────────────────
+const savingsCategories = [
+    { id: 'savings_investments', name: 'Savings & Investments', icon: 'trending-up', color: '#10B981' },
+    { id: 'loan_repayments', name: 'Loan Repayments', icon: 'credit-card', color: '#DC2626' },
+    { id: 'emergency_fund', name: 'Emergency Fund', icon: 'life-buoy', color: '#F59E0B' },
+    { id: 'child_education_fund', name: 'Child Education Fund', icon: 'graduation-cap', color: '#EC4899' },
+    { id: 'retirement_planning', name: 'Retirement Planning', icon: 'landmark', color: '#6366F1' },
+    { id: 'goal_based_savings', name: 'Goal-Based Savings', icon: 'target', color: '#0EA5E9' }
 ];
 
-// Transfer Categories
-const transferCategories = [
-    { id: 'home_transfer', name: 'Money to Home', icon: 'send', color: '#06B6D4' }
-];
+// All categories combined for lookups
+const categories = [...needsCategories, ...wantsCategories, ...savingsCategories];
 
-// Commitment Categories (Fixed monthly outflows)
-const commitmentCategories = [
-    { id: 'house_rent', name: 'House Rent', icon: 'home', color: '#EF4444' },
-    { id: 'loan_emi', name: 'Loan EMI', icon: 'credit-card', color: '#DC2626' }
-];
+// ─── Data Migration ────────────────────────────────────────────────────────────
+// Maps old category IDs to new ones
+const CATEGORY_MIGRATION = {
+    'food': 'food_groceries',
+    'transport': 'transportation',
+    'shopping': 'shopping',
+    'entertainment': 'entertainment',
+    'bills': 'utilities',
+    'health': 'healthcare',
+    'education': 'education',
+    'other_expense': 'misc_essential',
+    'sip_mutual_fund': 'savings_investments',
+    'stocks': 'savings_investments',
+    'daughter_1': 'child_education_fund',
+    'daughter_2': 'child_education_fund',
+    'other_investment': 'savings_investments',
+    'home_transfer': 'misc_essential',
+    'house_rent': 'housing',
+    'loan_emi': 'loan_repayments'
+};
 
-// All categories combined for backward compatibility
-const categories = [...expenseCategories, ...investmentCategories, ...transferCategories, ...commitmentCategories];
+// Given a category ID, determine which bucket it belongs to
+function getBucketForCategory(catId) {
+    if (needsCategories.some(c => c.id === catId)) return TRANSACTION_TYPES.NEEDS;
+    if (wantsCategories.some(c => c.id === catId)) return TRANSACTION_TYPES.WANTS;
+    if (savingsCategories.some(c => c.id === catId)) return TRANSACTION_TYPES.SAVINGS;
+    return TRANSACTION_TYPES.NEEDS; // fallback
+}
 
-// Storage Manager
+function migrateData() {
+    const MIGRATION_KEY = 'budget_migration_v2';
+    if (localStorage.getItem(MIGRATION_KEY) === 'done') return;
+
+    const expenses = StorageManager.getExpenses();
+    if (expenses.length === 0) {
+        localStorage.setItem(MIGRATION_KEY, 'done');
+        return;
+    }
+
+    let migrated = false;
+    const updatedExpenses = expenses.map(expense => {
+        const updated = { ...expense };
+
+        // Migrate category ID
+        if (CATEGORY_MIGRATION[updated.category]) {
+            updated.category = CATEGORY_MIGRATION[updated.category];
+            migrated = true;
+        }
+
+        // Migrate type to new bucket (or infer from category)
+        const oldTypes = ['expense', 'investment', 'transfer', 'commitment'];
+        if (!updated.type || oldTypes.includes(updated.type)) {
+            updated.type = getBucketForCategory(updated.category);
+            migrated = true;
+        }
+
+        return updated;
+    });
+
+    if (migrated) {
+        StorageManager.saveExpenses(updatedExpenses);
+    }
+    localStorage.setItem(MIGRATION_KEY, 'done');
+}
+
+// ─── Storage Manager ───────────────────────────────────────────────────────────
 const StorageManager = {
     EXPENSES_KEY: 'budget_expenses',
-    INCOME_KEY: 'monthly_income',  // Changed from budget to income
+    INCOME_KEY: 'monthly_income',
     USER_KEY: 'user_profile',
     ONBOARDING_KEY: 'onboarding_complete',
 
@@ -59,7 +134,6 @@ const StorageManager = {
         localStorage.setItem(this.EXPENSES_KEY, JSON.stringify(expenses));
     },
 
-    // Income methods (replaced budget)
     getIncome() {
         const data = localStorage.getItem(this.INCOME_KEY);
         return data ? JSON.parse(data) : 5000;
@@ -69,14 +143,9 @@ const StorageManager = {
         localStorage.setItem(this.INCOME_KEY, JSON.stringify(income));
     },
 
-    // Backward compatibility - redirect budget calls to income
-    getBudget() {
-        return this.getIncome();
-    },
-
-    saveBudget(budget) {
-        this.saveIncome(budget);
-    },
+    // Backward compatibility
+    getBudget() { return this.getIncome(); },
+    saveBudget(budget) { this.saveIncome(budget); },
 
     getUserProfile() {
         const data = localStorage.getItem(this.USER_KEY);
@@ -113,13 +182,15 @@ const StorageManager = {
     }
 };
 
-// App State
+// ─── App State ─────────────────────────────────────────────────────────────────
 let currentView = 'dashboard';
 let selectedPeriod = 'month';
 let selectedReportMonth = new Date().toISOString().slice(0, 7);
 let historyFilter = 'all';
 let chartInstances = {};
 let onboardingStep = 1;
+let selectedTransactionType = TRANSACTION_TYPES.NEEDS;
+
 const currencies = [
     { code: 'USD', symbol: '$', name: 'US Dollar' },
     { code: 'EUR', symbol: '€', name: 'Euro' },
@@ -133,13 +204,14 @@ const currencies = [
 ];
 let selectedCurrency = 'USD';
 
-// Initialize App
+// ─── Initialize App ────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    migrateData();
     renderApp();
     lucide.createIcons();
 });
 
-// Render Functions
+// ─── Render Functions ──────────────────────────────────────────────────────────
 function renderApp() {
     const app = document.getElementById('app');
 
@@ -178,6 +250,7 @@ function renderApp() {
     }
 }
 
+// ─── Onboarding ────────────────────────────────────────────────────────────────
 function renderOnboarding() {
     const steps = {
         1: renderWelcomeStep,
@@ -211,7 +284,12 @@ function renderWelcomeStep() {
                 <i data-lucide="wallet" class="w-12 h-12 text-indigo-600"></i>
             </div>
             <h1 class="text-3xl font-bold text-gray-800 mb-3">Welcome to Budget Tracker</h1>
-            <p class="text-gray-600 mb-8">Track your personal and family expenses with ease. Get insights, visualize your spending, and stay on budget.</p>
+            <p class="text-gray-600 mb-4">Track your personal and family expenses using the proven <strong>50/20/30</strong> budgeting framework.</p>
+            <div class="flex justify-center gap-3 mb-6 text-sm">
+                <span class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full font-medium">50% Needs</span>
+                <span class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full font-medium">20% Wants</span>
+                <span class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">30% Savings</span>
+            </div>
             <button onclick="nextOnboardingStep()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition">
                 Get Started
             </button>
@@ -267,6 +345,14 @@ function renderBudgetStep() {
                         <input type="number" name="monthlyIncome" required min="1" 
                             class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-lg"
                             placeholder="5000" value="5000">
+                    </div>
+                </div>
+                <div class="bg-indigo-50 rounded-xl p-4 text-sm text-indigo-800">
+                    <p class="font-medium mb-2">Your budget will be split as:</p>
+                    <div class="space-y-1">
+                        <div class="flex justify-between"><span>🏠 Needs (50%)</span><span class="font-semibold" id="needsPreview">$2,500</span></div>
+                        <div class="flex justify-between"><span>🎯 Wants (20%)</span><span class="font-semibold" id="wantsPreview">$1,000</span></div>
+                        <div class="flex justify-between"><span>💰 Savings (30%)</span><span class="font-semibold" id="savingsPreview">$1,500</span></div>
                     </div>
                 </div>
                 <div class="flex gap-3">
@@ -341,9 +427,21 @@ function renderReadyStep() {
                     <span class="text-gray-600">Monthly Income</span>
                     <span class="font-medium">${currency.symbol}${income.toLocaleString()}</span>
                 </div>
-                <div class="flex justify-between py-2">
+                <div class="flex justify-between py-2 border-b border-gray-200">
                     <span class="text-gray-600">Currency</span>
                     <span class="font-medium">${user?.currency || 'USD'}</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-200">
+                    <span class="text-gray-600">Needs (50%)</span>
+                    <span class="font-medium text-amber-600">${currency.symbol}${(income * 0.5).toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-200">
+                    <span class="text-gray-600">Wants (20%)</span>
+                    <span class="font-medium text-purple-600">${currency.symbol}${(income * 0.2).toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between py-2">
+                    <span class="text-gray-600">Savings (30%)</span>
+                    <span class="font-medium text-emerald-600">${currency.symbol}${(income * 0.3).toLocaleString()}</span>
                 </div>
             </div>
             
@@ -354,6 +452,7 @@ function renderReadyStep() {
     `;
 }
 
+// ─── Header & Navigation ──────────────────────────────────────────────────────
 function renderHeader() {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const user = StorageManager.getUserProfile();
@@ -408,37 +507,43 @@ function renderBottomNav() {
     `;
 }
 
+// ─── Dashboard ─────────────────────────────────────────────────────────────────
 function renderDashboard() {
     const expenses = StorageManager.getExpenses();
     const monthlyIncome = StorageManager.getIncome();
     const currentMonthTransactions = getCurrentMonthTransactions(expenses);
 
-    // Calculate totals by type
-    const totalExpenses = currentMonthTransactions
-        .filter(t => t.type === TRANSACTION_TYPES.EXPENSE)
+    // Calculate totals by bucket
+    const totalNeeds = currentMonthTransactions
+        .filter(t => t.type === TRANSACTION_TYPES.NEEDS)
         .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalInvestments = currentMonthTransactions
-        .filter(t => t.type === TRANSACTION_TYPES.INVESTMENT)
+    const totalWants = currentMonthTransactions
+        .filter(t => t.type === TRANSACTION_TYPES.WANTS)
         .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalTransfers = currentMonthTransactions
-        .filter(t => t.type === TRANSACTION_TYPES.TRANSFER)
+    const totalSavings = currentMonthTransactions
+        .filter(t => t.type === TRANSACTION_TYPES.SAVINGS)
         .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalCommitments = currentMonthTransactions
-        .filter(t => t.type === TRANSACTION_TYPES.COMMITMENT)
-        .reduce((sum, t) => sum + t.amount, 0);
+    const totalOutflow = totalNeeds + totalWants + totalSavings;
+    const remaining = monthlyIncome - totalOutflow;
+    const remainingPercent = monthlyIncome > 0 ? (remaining / monthlyIncome) * 100 : 0;
 
-    const totalOutflow = totalExpenses + totalInvestments + totalTransfers + totalCommitments;
-    const savings = monthlyIncome - totalOutflow;
-    const savingsPercent = monthlyIncome > 0 ? (savings / monthlyIncome) * 100 : 0;
+    // Budget targets
+    const needsTarget = monthlyIncome * 0.5;
+    const wantsTarget = monthlyIncome * 0.2;
+    const savingsTarget = monthlyIncome * 0.3;
+
+    const needsPercent = monthlyIncome > 0 ? (totalNeeds / monthlyIncome) * 100 : 0;
+    const wantsPercent = monthlyIncome > 0 ? (totalWants / monthlyIncome) * 100 : 0;
+    const savingsPercent = monthlyIncome > 0 ? (totalSavings / monthlyIncome) * 100 : 0;
 
     const currencySymbol = getCurrencySymbol();
 
     return `
         <div class="space-y-6">
-            <!-- Main Summary: Income & Savings -->
+            <!-- Main Summary: Income & Remaining -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl p-6 card-shadow text-white">
                     <div class="flex items-center justify-between">
@@ -451,67 +556,142 @@ function renderDashboard() {
                         </button>
                     </div>
                 </div>
-                <div class="${savings >= 0 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-600'} rounded-xl p-6 card-shadow text-white">
+                <div class="${remaining >= 0 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-600'} rounded-xl p-6 card-shadow text-white">
                     <div>
-                        <p class="text-white/80 text-sm">Monthly Savings</p>
-                        <p class="text-3xl font-bold">${currencySymbol}${savings.toLocaleString()}</p>
-                        <p class="text-white/80 text-sm mt-1">${savingsPercent.toFixed(1)}% of income</p>
+                        <p class="text-white/80 text-sm">Remaining Balance</p>
+                        <p class="text-3xl font-bold">${currencySymbol}${remaining.toLocaleString()}</p>
+                        <p class="text-white/80 text-sm mt-1">${remainingPercent.toFixed(1)}% of income</p>
                     </div>
                 </div>
             </div>
             
-            <!-- Detailed Breakdown -->
+            <!-- 50/20/30 Budget Allocation -->
             <div class="bg-white rounded-xl p-5 card-shadow">
-                <h3 class="font-semibold text-gray-800 mb-4">Monthly Outflow Breakdown</h3>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="p-4 bg-red-50 rounded-xl">
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                                <i data-lucide="shopping-bag" class="w-4 h-4 text-red-600"></i>
+                <h3 class="font-semibold text-gray-800 mb-4">Budget Allocation (50 / 20 / 30)</h3>
+                <div class="space-y-5">
+                    <!-- Needs -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                                    <i data-lucide="home" class="w-4 h-4 text-amber-600"></i>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-800">Needs</span>
+                                    <span class="text-xs text-gray-500 ml-1">(Target: 50%)</span>
+                                </div>
                             </div>
-                            <span class="text-sm text-gray-600">Expenses</span>
+                            <div class="text-right">
+                                <span class="font-semibold ${totalNeeds > needsTarget ? 'text-red-600' : 'text-gray-800'}">${currencySymbol}${totalNeeds.toLocaleString()}</span>
+                                <span class="text-gray-400 text-sm"> / ${currencySymbol}${needsTarget.toLocaleString()}</span>
+                            </div>
                         </div>
-                        <p class="text-xl font-bold text-gray-800">${currencySymbol}${totalExpenses.toLocaleString()}</p>
+                        <div class="w-full bg-gray-200 rounded-full h-3 relative">
+                            <div class="absolute top-0 left-0 h-3 rounded-full transition-all duration-500 ${totalNeeds > needsTarget ? 'bg-red-500' : 'bg-amber-500'}" 
+                                 style="width: ${Math.min(needsPercent * 2, 100)}%"></div>
+                            <div class="absolute top-0 h-3 border-r-2 border-dashed border-gray-400" style="left: 100%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">${needsPercent.toFixed(1)}% of income used ${totalNeeds > needsTarget ? '⚠️ Over target' : '✓ Within target'}</p>
                     </div>
-                    <div class="p-4 bg-blue-50 rounded-xl">
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <i data-lucide="trending-up" class="w-4 h-4 text-blue-600"></i>
+
+                    <!-- Wants -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <i data-lucide="shopping-bag" class="w-4 h-4 text-purple-600"></i>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-800">Wants</span>
+                                    <span class="text-xs text-gray-500 ml-1">(Target: 20%)</span>
+                                </div>
                             </div>
-                            <span class="text-sm text-gray-600">Investments</span>
+                            <div class="text-right">
+                                <span class="font-semibold ${totalWants > wantsTarget ? 'text-red-600' : 'text-gray-800'}">${currencySymbol}${totalWants.toLocaleString()}</span>
+                                <span class="text-gray-400 text-sm"> / ${currencySymbol}${wantsTarget.toLocaleString()}</span>
+                            </div>
                         </div>
-                        <p class="text-xl font-bold text-gray-800">${currencySymbol}${totalInvestments.toLocaleString()}</p>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 ${totalWants > wantsTarget ? 'bg-red-500' : 'bg-purple-500'}" 
+                                 style="width: ${Math.min(wantsPercent * 5, 100)}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">${wantsPercent.toFixed(1)}% of income used ${totalWants > wantsTarget ? '⚠️ Over target' : '✓ Within target'}</p>
                     </div>
-                    <div class="p-4 bg-cyan-50 rounded-xl">
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
-                                <i data-lucide="send" class="w-4 h-4 text-cyan-600"></i>
+
+                    <!-- Savings -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                    <i data-lucide="trending-up" class="w-4 h-4 text-emerald-600"></i>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-800">Savings & Goals</span>
+                                    <span class="text-xs text-gray-500 ml-1">(Target: 30%)</span>
+                                </div>
                             </div>
-                            <span class="text-sm text-gray-600">Transfers</span>
-                        </div>
-                        <p class="text-xl font-bold text-gray-800">${currencySymbol}${totalTransfers.toLocaleString()}</p>
-                    </div>
-                    <div class="p-4 bg-orange-50 rounded-xl">
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                                <i data-lucide="home" class="w-4 h-4 text-orange-600"></i>
+                            <div class="text-right">
+                                <span class="font-semibold text-gray-800">${currencySymbol}${totalSavings.toLocaleString()}</span>
+                                <span class="text-gray-400 text-sm"> / ${currencySymbol}${savingsTarget.toLocaleString()}</span>
                             </div>
-                            <span class="text-sm text-gray-600">Commitments</span>
                         </div>
-                        <p class="text-xl font-bold text-gray-800">${currencySymbol}${totalCommitments.toLocaleString()}</p>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 bg-emerald-500" 
+                                 style="width: ${Math.min((savingsPercent / 30) * 100, 100)}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">${savingsPercent.toFixed(1)}% of income saved ${totalSavings >= savingsTarget ? '🎉 Target met!' : `${(savingsTarget - totalSavings) > 0 ? currencySymbol + (savingsTarget - totalSavings).toLocaleString() + ' more to reach target' : ''}`}</p>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Bucket Summary Cards -->
+            <div class="grid grid-cols-3 gap-3">
+                <div class="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                            <i data-lucide="home" class="w-4 h-4 text-amber-600"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500">Needs</p>
+                    <p class="text-lg font-bold text-gray-800">${currencySymbol}${totalNeeds.toLocaleString()}</p>
+                </div>
+                <div class="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i data-lucide="shopping-bag" class="w-4 h-4 text-purple-600"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500">Wants</p>
+                    <p class="text-lg font-bold text-gray-800">${currencySymbol}${totalWants.toLocaleString()}</p>
+                </div>
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-emerald-600"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500">Savings</p>
+                    <p class="text-lg font-bold text-gray-800">${currencySymbol}${totalSavings.toLocaleString()}</p>
+                </div>
+            </div>
+
             <!-- Total Outflow Progress -->
             <div class="bg-white rounded-xl p-5 card-shadow">
                 <div class="flex justify-between text-sm mb-2">
                     <span class="text-gray-600">Total Outflow vs Income</span>
                     <span class="font-medium ${totalOutflow > monthlyIncome ? 'text-red-500' : 'text-gray-700'}">${currencySymbol}${totalOutflow.toLocaleString()} / ${currencySymbol}${monthlyIncome.toLocaleString()}</span>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-4">
-                    <div class="${totalOutflow > monthlyIncome ? 'bg-red-500' : 'bg-indigo-500'} h-4 rounded-full transition-all duration-500" 
-                         style="width: ${Math.min((totalOutflow / monthlyIncome) * 100, 100)}%"></div>
+                <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div class="h-4 rounded-full transition-all duration-500 flex" style="width: ${Math.min((totalOutflow / monthlyIncome) * 100, 100)}%">
+                        <div class="bg-amber-500 h-full" style="width: ${totalOutflow > 0 ? (totalNeeds / totalOutflow) * 100 : 0}%"></div>
+                        <div class="bg-purple-500 h-full" style="width: ${totalOutflow > 0 ? (totalWants / totalOutflow) * 100 : 0}%"></div>
+                        <div class="bg-emerald-500 h-full" style="width: ${totalOutflow > 0 ? (totalSavings / totalOutflow) * 100 : 0}%"></div>
+                    </div>
+                </div>
+                <div class="flex gap-4 mt-2 text-xs text-gray-500">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-amber-500 rounded-full"></span> Needs</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-purple-500 rounded-full"></span> Wants</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Savings</span>
                 </div>
                 <p class="text-xs text-gray-500 mt-2">
                     ${totalOutflow > monthlyIncome ? '⚠️ Warning: Outflow exceeds income!' : '✓ Outflow within income limit'}
@@ -525,7 +705,7 @@ function renderDashboard() {
                     <canvas id="dailyChart" height="200"></canvas>
                 </div>
                 <div class="bg-white rounded-xl p-5 card-shadow">
-                    <h3 class="font-semibold text-gray-800 mb-4">By Category</h3>
+                    <h3 class="font-semibold text-gray-800 mb-4">By Bucket</h3>
                     <canvas id="categoryChart" height="200"></canvas>
                 </div>
             </div>
@@ -544,8 +724,7 @@ function renderDashboard() {
     `;
 }
 
-let selectedTransactionType = TRANSACTION_TYPES.EXPENSE;
-
+// ─── Add Transaction ───────────────────────────────────────────────────────────
 function renderAddExpense() {
     const today = new Date().toISOString().split('T')[0];
     const currencySymbol = getCurrencySymbol();
@@ -558,44 +737,38 @@ function renderAddExpense() {
         <div class="max-w-md mx-auto">
             <h2 class="text-2xl font-bold text-gray-800 mb-6">Add Transaction</h2>
             <form onsubmit="handleTransactionSubmit(event)" class="bg-white rounded-xl p-6 card-shadow space-y-4">
-                <!-- Transaction Type Selection -->
+                <!-- Bucket Selection (3 types) -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Transaction Type</label>
-                    <div class="grid grid-cols-2 gap-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Budget Bucket</label>
+                    <div class="grid grid-cols-3 gap-2">
                         <label class="cursor-pointer">
-                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.EXPENSE}" 
-                                ${selectedTransactionType === TRANSACTION_TYPES.EXPENSE ? 'checked' : ''}
-                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.EXPENSE}')">
-                            <div class="flex items-center gap-2 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-red-500 peer-checked:bg-red-50 transition">
-                                <i data-lucide="shopping-bag" class="w-4 h-4 text-red-500"></i>
-                                <span class="text-sm font-medium">Expense</span>
+                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.NEEDS}" 
+                                ${selectedTransactionType === TRANSACTION_TYPES.NEEDS ? 'checked' : ''}
+                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.NEEDS}')">
+                            <div class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-amber-500 peer-checked:bg-amber-50 transition">
+                                <i data-lucide="home" class="w-5 h-5 text-amber-500"></i>
+                                <span class="text-xs font-medium">Needs</span>
+                                <span class="text-[10px] text-gray-400">50%</span>
                             </div>
                         </label>
                         <label class="cursor-pointer">
-                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.INVESTMENT}" 
-                                ${selectedTransactionType === TRANSACTION_TYPES.INVESTMENT ? 'checked' : ''}
-                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.INVESTMENT}')">
-                            <div class="flex items-center gap-2 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 transition">
-                                <i data-lucide="trending-up" class="w-4 h-4 text-blue-500"></i>
-                                <span class="text-sm font-medium">Investment</span>
+                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.WANTS}" 
+                                ${selectedTransactionType === TRANSACTION_TYPES.WANTS ? 'checked' : ''}
+                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.WANTS}')">
+                            <div class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-purple-500 peer-checked:bg-purple-50 transition">
+                                <i data-lucide="shopping-bag" class="w-5 h-5 text-purple-500"></i>
+                                <span class="text-xs font-medium">Wants</span>
+                                <span class="text-[10px] text-gray-400">20%</span>
                             </div>
                         </label>
                         <label class="cursor-pointer">
-                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.TRANSFER}" 
-                                ${selectedTransactionType === TRANSACTION_TYPES.TRANSFER ? 'checked' : ''}
-                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.TRANSFER}')">
-                            <div class="flex items-center gap-2 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-cyan-500 peer-checked:bg-cyan-50 transition">
-                                <i data-lucide="send" class="w-4 h-4 text-cyan-500"></i>
-                                <span class="text-sm font-medium">Transfer</span>
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.COMMITMENT}" 
-                                ${selectedTransactionType === TRANSACTION_TYPES.COMMITMENT ? 'checked' : ''}
-                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.COMMITMENT}')">
-                            <div class="flex items-center gap-2 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-orange-500 peer-checked:bg-orange-50 transition">
-                                <i data-lucide="home" class="w-4 h-4 text-orange-500"></i>
-                                <span class="text-sm font-medium">Commitment</span>
+                            <input type="radio" name="transactionType" value="${TRANSACTION_TYPES.SAVINGS}" 
+                                ${selectedTransactionType === TRANSACTION_TYPES.SAVINGS ? 'checked' : ''}
+                                class="peer sr-only" onchange="setTransactionType('${TRANSACTION_TYPES.SAVINGS}')">
+                            <div class="flex flex-col items-center gap-1 p-3 rounded-lg border-2 border-gray-200 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 transition">
+                                <i data-lucide="trending-up" class="w-5 h-5 text-emerald-500"></i>
+                                <span class="text-xs font-medium">Savings</span>
+                                <span class="text-[10px] text-gray-400">30%</span>
                             </div>
                         </label>
                     </div>
@@ -650,6 +823,7 @@ function renderAddExpense() {
     `;
 }
 
+// ─── History ───────────────────────────────────────────────────────────────────
 function renderHistory() {
     let expenses = StorageManager.getExpenses().sort((a, b) => new Date(b.date) - new Date(a.date));
     
@@ -672,7 +846,7 @@ function renderHistory() {
     return `
         <div>
             <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold text-gray-800">Expense History</h2>
+                <h2 class="text-2xl font-bold text-gray-800">Transaction History</h2>
                 <select onchange="filterHistory(this.value)" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
                     <option value="all" ${historyFilter === 'all' ? 'selected' : ''}>All Time</option>
                     <option value="month" ${historyFilter === 'month' ? 'selected' : ''}>This Month</option>
@@ -696,7 +870,10 @@ function renderHistory() {
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <span class="font-semibold text-gray-800">${currencySymbol}${expense.amount.toFixed(2)}</span>
+                                    <div class="text-right">
+                                        <span class="font-semibold text-gray-800">${currencySymbol}${expense.amount.toFixed(2)}</span>
+                                        <div><span class="text-xs px-2 py-0.5 rounded-full" style="background-color: ${getTypeBadge(expense.type).bg}; color: ${getTypeBadge(expense.type).color}">${getTypeBadge(expense.type).label}</span></div>
+                                    </div>
                                     <button onclick="deleteExpense(${expense.id})" class="text-red-400 hover:text-red-600">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
@@ -710,14 +887,15 @@ function renderHistory() {
             ${expenses.length === 0 ? `
                 <div class="text-center py-12">
                     <i data-lucide="inbox" class="w-12 h-12 text-gray-300 mx-auto mb-4"></i>
-                    <p class="text-gray-500">No expenses yet</p>
-                    <button onclick="setView('add')" class="mt-2 text-indigo-600 hover:underline">Add your first expense</button>
+                    <p class="text-gray-500">No transactions yet</p>
+                    <button onclick="setView('add')" class="mt-2 text-indigo-600 hover:underline">Add your first transaction</button>
                 </div>
             ` : ''}
         </div>
     `;
 }
 
+// ─── Analytics ─────────────────────────────────────────────────────────────────
 function renderAnalytics() {
     const expenses = StorageManager.getExpenses();
     const monthlyData = getMonthlyData(expenses);
@@ -746,7 +924,7 @@ function renderAnalytics() {
                     <canvas id="trendChart" height="250"></canvas>
                 </div>
                 <div class="bg-white rounded-xl p-5 card-shadow">
-                    <h3 class="font-semibold text-gray-800 mb-4">Category Distribution</h3>
+                    <h3 class="font-semibold text-gray-800 mb-4">Bucket Distribution</h3>
                     <canvas id="distributionChart" height="250"></canvas>
                 </div>
             </div>
@@ -759,7 +937,10 @@ function renderAnalytics() {
             .sort((a, b) => b[1] - a[1])
             .map(([catId, total]) => {
                 const cat = categories.find(c => c.id === catId);
+                if (!cat) return '';
                 const percentage = (total / Object.values(categoryTotals).reduce((a, b) => a + b, 0) * 100).toFixed(1);
+                const bucket = getBucketForCategory(catId);
+                const bucketLabel = getTransactionTypeLabel(bucket);
                 return `
                                 <div class="flex items-center gap-4">
                                     <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${cat.color}20">
@@ -767,7 +948,7 @@ function renderAnalytics() {
                                     </div>
                                     <div class="flex-1">
                                         <div class="flex justify-between mb-1">
-                                            <span class="font-medium text-gray-800">${cat.name}</span>
+                                            <span class="font-medium text-gray-800">${cat.name} <span class="text-xs text-gray-400">(${bucketLabel})</span></span>
                                             <span class="font-medium text-gray-800">${currencySymbol}${total.toFixed(2)}</span>
                                         </div>
                                         <div class="w-full bg-gray-200 rounded-full h-2">
@@ -803,22 +984,27 @@ function renderAnalytics() {
     `;
 }
 
+// ─── Expense Item Rendering ────────────────────────────────────────────────────
 function renderExpenseItem(expense) {
     const cat = categories.find(c => c.id === expense.category);
     const currencySymbol = getCurrencySymbol();
-    const typeBadge = getTypeBadge(expense.type || TRANSACTION_TYPES.EXPENSE);
+    const typeBadge = getTypeBadge(expense.type || TRANSACTION_TYPES.NEEDS);
+
+    // Fallback for categories not found (e.g. unmigrated data)
+    const catColor = cat ? cat.color : '#999';
+    const catIcon = cat ? cat.icon : 'circle';
 
     return `
         <div class="flex items-center justify-between py-2">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${cat.color}20">
-                    <i data-lucide="${cat.icon}" class="w-5 h-5" style="color: ${cat.color}"></i>
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${catColor}20">
+                    <i data-lucide="${catIcon}" class="w-5 h-5" style="color: ${catColor}"></i>
                 </div>
                 <div>
                     <p class="font-medium text-gray-800">${expense.description}</p>
                     <div class="flex items-center gap-2">
                         <span class="text-xs text-gray-500">${new Date(expense.date).toLocaleDateString()}</span>
-                        <span class="text-xs px-2 py-0.5 rounded-full ${typeBadge.class}" style="background-color: ${typeBadge.bg}; color: ${typeBadge.color}">${typeBadge.label}</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background-color: ${typeBadge.bg}; color: ${typeBadge.color}">${typeBadge.label}</span>
                     </div>
                 </div>
             </div>
@@ -829,20 +1015,18 @@ function renderExpenseItem(expense) {
 
 function getTypeBadge(type) {
     switch (type) {
-        case TRANSACTION_TYPES.EXPENSE:
-            return { label: 'Expense', class: 'bg-red-100 text-red-700', bg: '#FEE2E2', color: '#B91C1C' };
-        case TRANSACTION_TYPES.INVESTMENT:
-            return { label: 'Investment', class: 'bg-blue-100 text-blue-700', bg: '#DBEAFE', color: '#1D4ED8' };
-        case TRANSACTION_TYPES.TRANSFER:
-            return { label: 'Transfer', class: 'bg-cyan-100 text-cyan-700', bg: '#CFFAFE', color: '#0E7490' };
-        case TRANSACTION_TYPES.COMMITMENT:
-            return { label: 'Commitment', class: 'bg-orange-100 text-orange-700', bg: '#FFEDD5', color: '#C2410C' };
+        case TRANSACTION_TYPES.NEEDS:
+            return { label: 'Needs', bg: '#FEF3C7', color: '#B45309' };
+        case TRANSACTION_TYPES.WANTS:
+            return { label: 'Wants', bg: '#F3E8FF', color: '#7E22CE' };
+        case TRANSACTION_TYPES.SAVINGS:
+            return { label: 'Savings', bg: '#D1FAE5', color: '#065F46' };
         default:
-            return { label: 'Expense', class: 'bg-red-100 text-red-700', bg: '#FEE2E2', color: '#B91C1C' };
+            return { label: 'Needs', bg: '#FEF3C7', color: '#B45309' };
     }
 }
 
-// Helper Functions
+// ─── Helper Functions ──────────────────────────────────────────────────────────
 function getCurrentMonthExpenses(expenses) {
     const now = new Date();
     return expenses.filter(e => {
@@ -907,8 +1091,6 @@ function getYearlyComparison(expenses) {
 function generateInsights(expenses, categoryTotals) {
     const insights = [];
     const currencySymbol = getCurrencySymbol();
-
-    // Get current month transactions
     const currentMonthTransactions = getCurrentMonthTransactions(expenses);
 
     if (currentMonthTransactions.length === 0) {
@@ -916,54 +1098,57 @@ function generateInsights(expenses, categoryTotals) {
         return insights;
     }
 
-    // Calculate by type
-    const expenseAmount = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.EXPENSE).reduce((sum, t) => sum + t.amount, 0);
-    const investments = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.INVESTMENT).reduce((sum, t) => sum + t.amount, 0);
-    const transfers = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.TRANSFER).reduce((sum, t) => sum + t.amount, 0);
-    const commitments = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.COMMITMENT).reduce((sum, t) => sum + t.amount, 0);
-
-    const totalOutflow = expenseAmount + investments + transfers + commitments;
     const income = StorageManager.getIncome();
-    const savings = income - totalOutflow;
-    const savingsRate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
+
+    // Calculate by bucket
+    const needsAmount = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.NEEDS).reduce((sum, t) => sum + t.amount, 0);
+    const wantsAmount = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.WANTS).reduce((sum, t) => sum + t.amount, 0);
+    const savingsAmount = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.SAVINGS).reduce((sum, t) => sum + t.amount, 0);
+    const totalOutflow = needsAmount + wantsAmount + savingsAmount;
+    const remaining = income - totalOutflow;
+
+    const needsPercent = income > 0 ? ((needsAmount / income) * 100).toFixed(1) : 0;
+    const wantsPercent = income > 0 ? ((wantsAmount / income) * 100).toFixed(1) : 0;
+    const savingsPercent = income > 0 ? ((savingsAmount / income) * 100).toFixed(1) : 0;
+
+    // 50/20/30 compliance
+    if (needsPercent > 50) {
+        insights.push(`⚠️ Needs spending at ${needsPercent}% (target: 50%). Consider reducing essential expenses.`);
+    } else {
+        insights.push(`✓ Needs at ${needsPercent}% of income — within the 50% target.`);
+    }
+
+    if (wantsPercent > 20) {
+        insights.push(`⚠️ Wants spending at ${wantsPercent}% (target: 20%). Try to cut discretionary spending.`);
+    } else {
+        insights.push(`✓ Wants at ${wantsPercent}% of income — within the 20% target.`);
+    }
+
+    if (savingsPercent >= 30) {
+        insights.push(`🎉 Savings at ${savingsPercent}% — you've hit the 30% savings target!`);
+    } else if (savingsPercent > 0) {
+        insights.push(`💰 Savings at ${savingsPercent}% (target: 30%). ${currencySymbol}${((income * 0.3) - savingsAmount).toFixed(0)} more to reach goal.`);
+    } else {
+        insights.push(`💡 No savings recorded yet. Aim to save 30% (${currencySymbol}${(income * 0.3).toFixed(0)}) monthly.`);
+    }
 
     // Top spending category
-    const expenseTransactions = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.EXPENSE);
-    const expenseByCategory = {};
-    expenseTransactions.forEach(t => {
-        expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amount;
-    });
-    const topCategory = Object.entries(expenseByCategory).sort((a, b) => b[1] - a[1])[0];
+    const currentCategoryTotals = getCategoryTotals(currentMonthTransactions);
+    const topCategory = Object.entries(currentCategoryTotals).sort((a, b) => b[1] - a[1])[0];
     if (topCategory) {
         const catName = getCategoryName(topCategory[0]);
-        insights.push(`Top expense: ${catName} (${currencySymbol}${topCategory[1].toFixed(0)})`);
+        insights.push(`📊 Top expense: ${catName} (${currencySymbol}${topCategory[1].toFixed(0)})`);
     }
 
-    // Investment insights
-    if (investments > 0) {
-        const investPercent = ((investments / income) * 100).toFixed(1);
-        insights.push(`Great! You're investing ${investPercent}% of income (${currencySymbol}${investments.toFixed(0)})`);
-    }
-
-    // Savings insights
-    if (savingsRate > 20) {
-        insights.push(`Excellent savings rate: ${savingsRate}% (${currencySymbol}${savings.toFixed(0)}) 🎉`);
-    } else if (savingsRate > 0) {
-        insights.push(`Savings rate: ${savingsRate}% (${currencySymbol}${savings.toFixed(0)})`);
-    } else if (savingsRate < 0) {
-        insights.push(`⚠️ Spending exceeds income by ${currencySymbol}${Math.abs(savings).toFixed(0)}`);
-    }
-
-    // Commitments check
-    if (commitments > 0) {
-        const commitPercent = ((commitments / income) * 100).toFixed(1);
-        insights.push(`Fixed commitments: ${commitPercent}% of income (${currencySymbol}${commitments.toFixed(0)})`);
+    // Remaining balance
+    if (remaining < 0) {
+        insights.push(`🚨 Spending exceeds income by ${currencySymbol}${Math.abs(remaining).toFixed(0)}!`);
     }
 
     return insights;
 }
 
-// Chart Functions
+// ─── Chart Functions ───────────────────────────────────────────────────────────
 function initDashboardCharts() {
     const expenses = StorageManager.getExpenses();
     const ctx1 = document.getElementById('dailyChart');
@@ -1013,17 +1198,19 @@ function initDashboardCharts() {
         }
     });
 
-    // Category distribution
-    const categoryTotals = getCategoryTotals(getCurrentMonthExpenses(expenses));
-    const catData = categories.map(c => categoryTotals[c.id] || 0);
+    // Bucket distribution (Needs / Wants / Savings)
+    const currentMonthTransactions = getCurrentMonthExpenses(expenses);
+    const needsTotal = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.NEEDS).reduce((s, t) => s + t.amount, 0);
+    const wantsTotal = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.WANTS).reduce((s, t) => s + t.amount, 0);
+    const savingsTotal = currentMonthTransactions.filter(t => t.type === TRANSACTION_TYPES.SAVINGS).reduce((s, t) => s + t.amount, 0);
 
     chartInstances.category = new Chart(ctx2, {
         type: 'doughnut',
         data: {
-            labels: categories.map(c => c.name),
+            labels: ['Needs (50%)', 'Wants (20%)', 'Savings (30%)'],
             datasets: [{
-                data: catData,
-                backgroundColor: categories.map(c => c.color),
+                data: [needsTotal, wantsTotal, savingsTotal],
+                backgroundColor: ['#F59E0B', '#A855F7', '#10B981'],
                 borderWidth: 0
             }]
         },
@@ -1071,15 +1258,30 @@ function initAnalyticsCharts() {
         }
     });
 
-    // Distribution chart
-    const categoryTotals = getCategoryTotals(expenses);
+    // Bucket distribution (pie chart with all categories grouped by bucket)
+    const bucketTotals = {
+        [TRANSACTION_TYPES.NEEDS]: 0,
+        [TRANSACTION_TYPES.WANTS]: 0,
+        [TRANSACTION_TYPES.SAVINGS]: 0
+    };
+    expenses.forEach(e => {
+        const bucket = e.type || getBucketForCategory(e.category);
+        if (bucketTotals[bucket] !== undefined) {
+            bucketTotals[bucket] += e.amount;
+        }
+    });
+
     chartInstances.distribution = new Chart(ctx2, {
         type: 'pie',
         data: {
-            labels: categories.map(c => c.name),
+            labels: ['Needs (50%)', 'Wants (20%)', 'Savings (30%)'],
             datasets: [{
-                data: categories.map(c => categoryTotals[c.id] || 0),
-                backgroundColor: categories.map(c => c.color),
+                data: [
+                    bucketTotals[TRANSACTION_TYPES.NEEDS],
+                    bucketTotals[TRANSACTION_TYPES.WANTS],
+                    bucketTotals[TRANSACTION_TYPES.SAVINGS]
+                ],
+                backgroundColor: ['#F59E0B', '#A855F7', '#10B981'],
                 borderWidth: 2,
                 borderColor: '#fff'
             }]
@@ -1118,7 +1320,7 @@ function initAnalyticsCharts() {
     }
 }
 
-// Action Functions
+// ─── Action Functions ──────────────────────────────────────────────────────────
 function setView(view) {
     currentView = view;
     renderApp();
@@ -1137,7 +1339,7 @@ function handleTransactionSubmit(e) {
         description: form.description.value,
         category: form.category.value,
         date: form.date.value,
-        type: selectedTransactionType  // Store the transaction type
+        type: selectedTransactionType
     };
 
     StorageManager.addExpense(transaction);
@@ -1145,7 +1347,7 @@ function handleTransactionSubmit(e) {
     form.date.value = new Date().toISOString().split('T')[0];
 
     const typeLabel = getTransactionTypeLabel(selectedTransactionType);
-    alert(`${typeLabel} added successfully!`);
+    alert(`${typeLabel} transaction added successfully!`);
     setView('dashboard');
 }
 
@@ -1156,29 +1358,25 @@ function setTransactionType(type) {
 
 function getCategoriesByType(type) {
     switch (type) {
-        case TRANSACTION_TYPES.EXPENSE:
-            return expenseCategories;
-        case TRANSACTION_TYPES.INVESTMENT:
-            return investmentCategories;
-        case TRANSACTION_TYPES.TRANSFER:
-            return transferCategories;
-        case TRANSACTION_TYPES.COMMITMENT:
-            return commitmentCategories;
+        case TRANSACTION_TYPES.NEEDS:
+            return needsCategories;
+        case TRANSACTION_TYPES.WANTS:
+            return wantsCategories;
+        case TRANSACTION_TYPES.SAVINGS:
+            return savingsCategories;
         default:
-            return expenseCategories;
+            return needsCategories;
     }
 }
 
 function getTransactionTypeLabel(type) {
     switch (type) {
-        case TRANSACTION_TYPES.EXPENSE:
-            return 'Expense';
-        case TRANSACTION_TYPES.INVESTMENT:
-            return 'Investment';
-        case TRANSACTION_TYPES.TRANSFER:
-            return 'Transfer';
-        case TRANSACTION_TYPES.COMMITMENT:
-            return 'Commitment';
+        case TRANSACTION_TYPES.NEEDS:
+            return 'Needs';
+        case TRANSACTION_TYPES.WANTS:
+            return 'Wants';
+        case TRANSACTION_TYPES.SAVINGS:
+            return 'Savings';
         default:
             return 'Transaction';
     }
@@ -1186,14 +1384,12 @@ function getTransactionTypeLabel(type) {
 
 function getTransactionTypeColor(type) {
     switch (type) {
-        case TRANSACTION_TYPES.EXPENSE:
-            return 'red';
-        case TRANSACTION_TYPES.INVESTMENT:
-            return 'blue';
-        case TRANSACTION_TYPES.TRANSFER:
-            return 'cyan';
-        case TRANSACTION_TYPES.COMMITMENT:
-            return 'orange';
+        case TRANSACTION_TYPES.NEEDS:
+            return 'amber';
+        case TRANSACTION_TYPES.WANTS:
+            return 'purple';
+        case TRANSACTION_TYPES.SAVINGS:
+            return 'emerald';
         default:
             return 'indigo';
     }
@@ -1201,14 +1397,12 @@ function getTransactionTypeColor(type) {
 
 function getTransactionPlaceholder(type) {
     switch (type) {
-        case TRANSACTION_TYPES.EXPENSE:
-            return 'What did you spend on?';
-        case TRANSACTION_TYPES.INVESTMENT:
-            return 'e.g., SIP Mutual Fund Investment';
-        case TRANSACTION_TYPES.TRANSFER:
-            return 'e.g., Money sent to home';
-        case TRANSACTION_TYPES.COMMITMENT:
-            return 'e.g., House Rent, Loan EMI';
+        case TRANSACTION_TYPES.NEEDS:
+            return 'e.g., Grocery shopping, Electricity bill';
+        case TRANSACTION_TYPES.WANTS:
+            return 'e.g., Restaurant dinner, Netflix';
+        case TRANSACTION_TYPES.SAVINGS:
+            return 'e.g., SIP Mutual Fund, PPF deposit';
         default:
             return 'Enter description';
     }
@@ -1223,7 +1417,7 @@ function getCurrentMonthTransactions(expenses) {
 }
 
 function deleteExpense(id) {
-    if (confirm('Are you sure you want to delete this expense?')) {
+    if (confirm('Are you sure you want to delete this transaction?')) {
         StorageManager.deleteExpense(id);
         renderApp();
     }
@@ -1278,6 +1472,9 @@ function importData(event) {
                     StorageManager.saveUserProfile(data.user);
                 }
                 StorageManager.completeOnboarding();
+                // Re-run migration for imported data
+                localStorage.removeItem('budget_migration_v2');
+                migrateData();
                 renderApp();
                 alert('Data imported successfully!');
             } else {
@@ -1298,7 +1495,7 @@ function filterHistory(value) {
     renderApp();
 }
 
-// Onboarding Functions
+// ─── Onboarding Functions ──────────────────────────────────────────────────────
 function nextOnboardingStep() {
     if (onboardingStep < 5) {
         onboardingStep++;
@@ -1357,9 +1554,11 @@ function getCurrencySymbol() {
     return currency.symbol;
 }
 
+// ─── Monthly Report ────────────────────────────────────────────────────────────
 function renderMonthlyReport() {
     const expenses = StorageManager.getExpenses();
     const currencySymbol = getCurrencySymbol();
+    const monthlyIncome = StorageManager.getIncome();
 
     // Filter by selected month
     const [year, month] = selectedReportMonth.split('-');
@@ -1369,21 +1568,26 @@ function renderMonthlyReport() {
     });
 
     const totals = {
-        [TRANSACTION_TYPES.EXPENSE]: 0,
-        [TRANSACTION_TYPES.INVESTMENT]: 0,
-        [TRANSACTION_TYPES.TRANSFER]: 0,
-        [TRANSACTION_TYPES.COMMITMENT]: 0
+        [TRANSACTION_TYPES.NEEDS]: 0,
+        [TRANSACTION_TYPES.WANTS]: 0,
+        [TRANSACTION_TYPES.SAVINGS]: 0
     };
 
     reportMonthExpenses.forEach(e => {
-        if (totals[e.type] !== undefined) {
-            totals[e.type] += e.amount;
+        const bucket = e.type || getBucketForCategory(e.category);
+        if (totals[bucket] !== undefined) {
+            totals[bucket] += e.amount;
         } else {
-            totals[TRANSACTION_TYPES.EXPENSE] += e.amount;
+            totals[TRANSACTION_TYPES.NEEDS] += e.amount;
         }
     });
 
     const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+
+    // Percentages
+    const needsPct = monthlyIncome > 0 ? ((totals[TRANSACTION_TYPES.NEEDS] / monthlyIncome) * 100).toFixed(1) : '0.0';
+    const wantsPct = monthlyIncome > 0 ? ((totals[TRANSACTION_TYPES.WANTS] / monthlyIncome) * 100).toFixed(1) : '0.0';
+    const savingsPct = monthlyIncome > 0 ? ((totals[TRANSACTION_TYPES.SAVINGS] / monthlyIncome) * 100).toFixed(1) : '0.0';
 
     return `
         <div class="space-y-6 max-w-4xl mx-auto">
@@ -1411,39 +1615,43 @@ function renderMonthlyReport() {
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b-2 border-gray-100 text-gray-500 text-sm">
-                                <th class="py-3 font-medium">Category</th>
+                                <th class="py-3 font-medium">Bucket</th>
+                                <th class="py-3 font-medium text-center">Target</th>
+                                <th class="py-3 font-medium text-center">Actual</th>
                                 <th class="py-3 font-medium text-right">Amount</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             <tr>
                                 <td class="py-3 flex items-center gap-2">
-                                    <div class="w-3 h-3 rounded-full bg-red-500"></div> Expenses
+                                    <div class="w-3 h-3 rounded-full bg-amber-500"></div> Needs
                                 </td>
-                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.EXPENSE].toFixed(2)}</td>
+                                <td class="py-3 text-center text-gray-500">50%</td>
+                                <td class="py-3 text-center font-medium ${needsPct > 50 ? 'text-red-600' : 'text-gray-800'}">${needsPct}%</td>
+                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.NEEDS].toFixed(2)}</td>
                             </tr>
                             <tr>
                                 <td class="py-3 flex items-center gap-2">
-                                    <div class="w-3 h-3 rounded-full bg-blue-500"></div> Investments
+                                    <div class="w-3 h-3 rounded-full bg-purple-500"></div> Wants
                                 </td>
-                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.INVESTMENT].toFixed(2)}</td>
+                                <td class="py-3 text-center text-gray-500">20%</td>
+                                <td class="py-3 text-center font-medium ${wantsPct > 20 ? 'text-red-600' : 'text-gray-800'}">${wantsPct}%</td>
+                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.WANTS].toFixed(2)}</td>
                             </tr>
                             <tr>
                                 <td class="py-3 flex items-center gap-2">
-                                    <div class="w-3 h-3 rounded-full bg-cyan-500"></div> Transfers
+                                    <div class="w-3 h-3 rounded-full bg-emerald-500"></div> Savings
                                 </td>
-                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.TRANSFER].toFixed(2)}</td>
-                            </tr>
-                            <tr>
-                                <td class="py-3 flex items-center gap-2">
-                                    <div class="w-3 h-3 rounded-full bg-orange-500"></div> Commitments
-                                </td>
-                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.COMMITMENT].toFixed(2)}</td>
+                                <td class="py-3 text-center text-gray-500">30%</td>
+                                <td class="py-3 text-center font-medium ${savingsPct >= 30 ? 'text-emerald-600' : 'text-gray-800'}">${savingsPct}%</td>
+                                <td class="py-3 text-right font-medium text-gray-800">${currencySymbol}${totals[TRANSACTION_TYPES.SAVINGS].toFixed(2)}</td>
                             </tr>
                         </tbody>
                         <tfoot>
                             <tr class="bg-gray-50 font-bold text-gray-800">
                                 <td class="py-3 px-2 rounded-l-lg">Total Outflow</td>
+                                <td class="py-3 text-center">100%</td>
+                                <td class="py-3 text-center">${monthlyIncome > 0 ? ((grandTotal / monthlyIncome) * 100).toFixed(1) : '0.0'}%</td>
                                 <td class="py-3 px-2 text-right rounded-r-lg">${currencySymbol}${grandTotal.toFixed(2)}</td>
                             </tr>
                         </tfoot>
@@ -1474,25 +1682,24 @@ function initReportCharts() {
     });
 
     const totals = {
-        [TRANSACTION_TYPES.EXPENSE]: 0,
-        [TRANSACTION_TYPES.INVESTMENT]: 0,
-        [TRANSACTION_TYPES.TRANSFER]: 0,
-        [TRANSACTION_TYPES.COMMITMENT]: 0
+        [TRANSACTION_TYPES.NEEDS]: 0,
+        [TRANSACTION_TYPES.WANTS]: 0,
+        [TRANSACTION_TYPES.SAVINGS]: 0
     };
 
     reportMonthExpenses.forEach(e => {
-        if (totals[e.type] !== undefined) {
-            totals[e.type] += e.amount;
+        const bucket = e.type || getBucketForCategory(e.category);
+        if (totals[bucket] !== undefined) {
+            totals[bucket] += e.amount;
         } else {
-            totals[TRANSACTION_TYPES.EXPENSE] += e.amount;
+            totals[TRANSACTION_TYPES.NEEDS] += e.amount;
         }
     });
 
     const data = [
-        totals[TRANSACTION_TYPES.EXPENSE],
-        totals[TRANSACTION_TYPES.INVESTMENT],
-        totals[TRANSACTION_TYPES.TRANSFER],
-        totals[TRANSACTION_TYPES.COMMITMENT]
+        totals[TRANSACTION_TYPES.NEEDS],
+        totals[TRANSACTION_TYPES.WANTS],
+        totals[TRANSACTION_TYPES.SAVINGS]
     ];
 
     if (data.every(val => val === 0)) return;
@@ -1500,10 +1707,10 @@ function initReportCharts() {
     chartInstances.report = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Expenses', 'Investments', 'Transfers', 'Commitments'],
+            labels: ['Needs (50%)', 'Wants (20%)', 'Savings (30%)'],
             datasets: [{
                 data: data,
-                backgroundColor: ['#EF4444', '#3B82F6', '#06B6D4', '#F97316'],
+                backgroundColor: ['#F59E0B', '#A855F7', '#10B981'],
                 borderWidth: 0
             }]
         },
