@@ -62,6 +62,35 @@ Once configured, a **Sign in with Google** button appears in **Settings → Acco
 On sign-in, the app reconciles local and cloud data (you choose which wins), then
 keeps the cloud backup updated automatically after every change.
 
+## Android app (TWA)
+
+The `android/` folder contains a [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap)
+Trusted Web Activity project that packages the live site
+(`https://mohsinfurkh.github.io/Budget_Tracker/`) as a real Android app.
+The app always shows the latest deployed version — publishing a web update
+updates the app automatically.
+
+**Files that must never be committed** (already gitignored):
+`android/signing.keystore` and `android/keystore-password.txt`.
+**Back both up somewhere safe** — Android app updates must be signed with the
+same key forever; if it's lost, users must uninstall/reinstall.
+
+To rebuild after bumping `appVersionCode`/`appVersionName` in
+[android/twa-manifest.json](android/twa-manifest.json):
+
+```powershell
+cd android
+$env:JAVA_HOME = "$env:USERPROFILE\.bubblewrap\jdk17"
+npx -y @bubblewrap/cli update --skipVersionUpgrade   # regenerate project
+.\gradlew.bat assembleRelease bundleRelease           # build APK + AAB
+# then zipalign + apksigner (see android/sign.ps1)
+```
+
+The site serves [.well-known/assetlinks.json](.well-known/assetlinks.json) with
+the signing certificate fingerprint so the app runs full-screen (no browser bar).
+The Play-Store-ready `.aab` is produced alongside the APK; publishing it requires
+a Google Play developer account.
+
 ## CSV import format
 
 CSV files must have a header row with at least `date` and `amount` columns.

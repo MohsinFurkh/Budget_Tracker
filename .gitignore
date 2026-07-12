@@ -32,3 +32,4 @@ Thumbs.db
 # Android build (keep only twa-manifest.json; NEVER commit the keystore)
 android/*
 !android/twa-manifest.json
+!android/sign.ps1
