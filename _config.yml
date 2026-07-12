@@ -1,0 +1,5 @@
+# Jekyll (GitHub Pages) config
+# Jekyll excludes dot-directories by default; .well-known must be served
+# for Android App Links (TWA) verification.
+include:
+  - .well-known

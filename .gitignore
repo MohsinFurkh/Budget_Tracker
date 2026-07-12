@@ -28,3 +28,7 @@ Thumbs.db
 
 # Claude Code local config
 .claude/
+
+# Android build (keep only twa-manifest.json; NEVER commit the keystore)
+android/*
+!android/twa-manifest.json
