@@ -30,4 +30,12 @@
 //            appId: "1:1234567890:web:abcdef"
 //        };
 
-export const firebaseConfig = null;
+export const firebaseConfig = {
+    apiKey: "AIzaSyBdJ2lXkorYBFi9oxEuwPXvCEqYaQUFYQA",
+    authDomain: "budget-tracker-6d218.firebaseapp.com",
+    projectId: "budget-tracker-6d218",
+    storageBucket: "budget-tracker-6d218.firebasestorage.app",
+    messagingSenderId: "650253524059",
+    appId: "1:650253524059:web:13e54ab03decea0e1b737e",
+    measurementId: "G-79CVRXDV5M"
+};
