@@ -10,7 +10,17 @@
     <meta name="apple-mobile-web-app-title" content="Budget Tracker">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect fill='%23667eea' width='180' height='180' rx='24'/%3E%3Ctext x='90' y='120' font-size='100' text-anchor='middle' fill='white'%3E💰%3C/text%3E%3C/svg%3E">
+    <script>
+        // Apply dark mode before first paint to avoid a flash of light theme
+        try {
+            var s = JSON.parse(localStorage.getItem('app_settings') || '{}');
+            if (s.darkMode) document.documentElement.classList.add('dark');
+        } catch (e) { }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' };
+    </script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -18,11 +28,20 @@
         body { font-family: 'Inter', sans-serif; }
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        html.dark body { background-color: #111827; }
+        html.dark .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3); }
+
+        @media print {
+            .no-print, header, nav { display: none !important; }
+            body { background: white !important; }
+            .card-shadow { box-shadow: none !important; border: 1px solid #e5e7eb; }
+            main { padding: 0 !important; }
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
     <div id="app"></div>
-    <script src="app.js"></script>
+    <script type="module" src="js/app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
